@@ -1,3 +1,5 @@
+// Device test code
+
 imp.setpowersave(true);                                                                                                                                           
                                                                                                                                                                   
 disconnectReason <- "";                                                                                                                                           
@@ -319,4 +321,3 @@ agent.send("impid", {ImpID = format("%s",hardware.getimpeeid()), BootCount = nv.
 getAnalogData();    
 imp.onidle(function() {server.sleepfor(gformin)});
 // hardware.pin8.write(1); // turn off                                                                                                                                                                   
-
