@@ -89,7 +89,7 @@ agent.on("interval", function(interval)
 //    nv <- {gformin = interval.interval};
     nv.gformin <- interval.interval;
 //    gformin = interval.interval;
-    server.log("**Received sample interval: "+nv.gformin);
+//    server.log("**Received sample interval: "+nv.gformin);
 });
 
 agent.on("voltage_enable", function(voltage_enable)
@@ -98,7 +98,15 @@ agent.on("voltage_enable", function(voltage_enable)
     nv.voltage_enable <- voltage_enable.voltage_enable;
 //    voltage_enable = voltage_enable.voltage_enable;
 //    voltage_enable = nv.voltage_enable;
-    server.log("***Received voltage_enable: "+nv.voltage_enable);
+//    server.log("***Received voltage_enable: "+nv.voltage_enable);
+});
+
+agent.on("XivelyName", function(XivelyName)
+{
+//    nv <- {gformin = interval.interval};
+    nv.xively <- XivelyName.XivelyName;
+//    gformin = interval.interval;
+//    server.log("**Received Xively Name: "+nv.xively);
 });
 
 // UART Communication example for the Modbus communication
@@ -322,28 +330,47 @@ if (("nv" in getroottable()) && ("count" in nv))
     nv.count++;                                                                                                                                                   
     // Display the sleep count on our node                                                                                                                        
 //    server.show("--------Start Program------------Warm Boot Pass #" + nv.count);                                                                                  
-    server.log("--------Start Program------------Warm Boot Pass #" + nv.count);                                                                                   
+//    server.log("--------Start Program------------Warm Boot Pass #" + nv.count);                                                                                   
+    server.log(format("-----Start Program------- Warm Boot Pass #%d, WiFi %s, ID %s, Name: %s, Interval: %d -----", nv.count, nv.ssid, nv.impID, nv.xively, nv.gformin));
     boot = "warm";                                                                                                                                                
 }                                                                                                                                                                 
 else                                                                                                                                                              
 {   // cold boot - create nv & init count                                                                                                                         
+    // Get Xively Name
+//    imp.sleep(5.0);
     nv <- {
         pulses = [],
         count = 1,
         flowcnt = 0,
-        gformin = 10
+        gformin = 10,
+        ssid = imp.getssid(),
+        impID = hardware.getimpeeid(),
+        xively = "No Name Yet"
     };
+    
+    agent.send("impid", {ImpID = format("%s",hardware.getimpeeid()), BootCount = 1});
+    local i = 0;
+    // Wait for Agent to return Xively name
+/*
+    while(i++ <= 5 ) // nv.xively == "No Name Yet")
+    {
+//        imp.wakeup(1.0, function(){});
+        imp.sleep(1.0);
+        server.log(nv.xively);
+    }
+*/
     // Display the sleep count on our node                                                                                                                        
 //    server.show("--------Start Program------------Cold Boot Pass #" + nv.count);                                                                                  
-    server.log("--------Start Program------------Cold Boot Pass #" + nv.count);                                                                                   
+//    server.log("--------Start Program------------Cold Boot Pass #" + nv.count);
+    server.log(format("-----Start Program------- Cold Boot Pass #%d, WiFi %s, ID %s, Name: %s, Interval: %d -----", nv.count, nv.ssid, nv.impID, nv.xively, nv.gformin));
     boot = "cold";  
     agent.send("sendSMS", {mess="Starting Up Imp Cold Boot! " + hardware.getimpeeid(), highlevelalarm=0, other=1});                                                                                                 
 //    agent.send("sendSMS", "Starting Up Imp Cold Boot! ");
     
 }                                                                                                                                                                 
-                                                                                                                                                                  
+
 imp.enableblinkup(true);                                                                                                                                          
-                                                                                                                                                                  
+
 local endtime = hardware.millis() + 10 * 1000; // set the end time by adding msecs                                                                                
 while(boot == "cold" && (endtime - hardware.millis()) > 0) {                                                                                                      
     if (hardware.millis()%1000 == 0) {                                                                                                                            
@@ -369,7 +396,7 @@ function handleModbus() {
                         hardware.voltage(), imp.getmemoryfree(), hardware.getimpeeid(),                                                                           
                         imp.getbssid(), imp.getmacaddress() ))
     
-    server.log("bssid from imp: "+imp.getbssid()+" "+imp.getssid());
+//    server.log("bssid from imp: "+imp.getbssid()+" "+imp.getssid());
 /*
     server.log("scan wifi networks: ");
     foreach( item in imp.scanwifinetworks())
