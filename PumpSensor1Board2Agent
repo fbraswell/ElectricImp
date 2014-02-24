@@ -15,7 +15,8 @@ alarm_low <- -1.0; // low level alarm
 // qpd_setpoint <- 1.0; // quarts per day setpoint
 impid <- "no imp id yet"; // remember the imp ID
 
-function send_sms(number, message) {
+function send_sms(number, message) 
+{
     server.log("Sending sms:");
     server.log(message);
     local twilio_url = format("https://api.twilio.com/2010-04-01/Accounts/%s/SMS/Messages.json", TWILIO_ACCOUNT_SID);
@@ -23,38 +24,41 @@ function send_sms(number, message) {
     local body = http.urlencode({From=TWILIO_FROM_NUMBER, To=number, Body=message});
     local req = http.post(twilio_url, {Authorization=auth}, body);
     local res = req.sendsync();
-    if(res.statuscode != 201) {
+    if(res.statuscode != 201) 
+    {
         server.log("error sending message: "+res.body);
     }
 }
 
-device.on("sendSMS", function(options) {
-    if (options.other == 1) {
-    send_sms(TWILIO_TO_NUMBER, options.mess);
+device.on("sendSMS", function(options) 
+{
+    if (options.other == 1) 
+    {   send_sms(TWILIO_TO_NUMBER, options.mess);
     }
-    else {
-    local req = http.get("https://wellmark.webscript.io/smstimer");
-    local res = req.sendsync();
-    local smstimer = res.body.tointeger();  
-    local datetime = date();
-    server.log("smstimer");
-    server.log(smstimer);
-    if (smstimer == 0 && options.highlevelalarm) {
-        send_sms(TWILIO_TO_NUMBER, format("High Level Alarm on Production Water Tank 91 Reese Lease %d:%d - Wellmark Monitoring Services", datetime.hour-5, datetime.min));
-    }
-    else if (smstimer == 3*6) {
-        send_sms(TWILIO_TO_NUMBER, format("Days to Overfill: 30 on Crude Oil Tank 83 Reese Lease %d:%d - Wellmark Monitoring Services", datetime.hour-5, datetime.min));
-    }
-    else if (smstimer == 6*6) {
-        send_sms(TWILIO_TO_NUMBER, format("Days to Empty: 1 on Well 22 Chem Tank Reese Lease %d:%d - Wellmark Monitoring Services", datetime.hour-5, datetime.min));
-    }
-    smstimer += 1;
-    if (smstimer > 9*6) {
-        smstimer = 0;
-    }
-    local headers = { "Content-Type":"text/plain" };
-    local req = http.post("https://wellmark.webscript.io/smstimer", headers, format("%d", smstimer));
-    local res = req.sendsync();
+    else 
+    {
+        local req = http.get("https://wellmark.webscript.io/smstimer");
+        local res = req.sendsync();
+        local smstimer = res.body.tointeger();  
+        local datetime = date();
+        server.log("smstimer");
+        server.log(smstimer);
+        if (smstimer == 0 && options.highlevelalarm) 
+        {   send_sms(TWILIO_TO_NUMBER, format("High Level Alarm on Production Water Tank 91 Reese Lease %d:%d - Wellmark Monitoring Services", datetime.hour-5, datetime.min));
+        }
+        else if (smstimer == 3*6) 
+        {   send_sms(TWILIO_TO_NUMBER, format("Days to Overfill: 30 on Crude Oil Tank 83 Reese Lease %d:%d - Wellmark Monitoring Services", datetime.hour-5, datetime.min));
+        }
+        else if (smstimer == 6*6) 
+        {   send_sms(TWILIO_TO_NUMBER, format("Days to Empty: 1 on Well 22 Chem Tank Reese Lease %d:%d - Wellmark Monitoring Services", datetime.hour-5, datetime.min));
+        }
+        smstimer += 1;
+        if (smstimer > 9*6) 
+        {   smstimer = 0;
+        }
+        local headers = { "Content-Type":"text/plain" };
+        local req = http.post("https://wellmark.webscript.io/smstimer", headers, format("%d", smstimer));
+        local res = req.sendsync();
     }
 });
 
@@ -106,7 +110,6 @@ imp_table <-
                            , sample_interval = 10},
         EOGChemTank1 = {   impid = "xx237c523643fc42ee", feed = 2099714343, apikey = "mRJx9jKahQDHdIVDjd1GaISZOM4pc3XlV5QBPFUgQk7avbjE"  
                            , sample_interval = 10}
-        
     }; // end imp_table
 
 agent_myimpid <- 0; // Imp ID
@@ -154,8 +157,9 @@ local agent_BootCount = impid.BootCount;
             } // if(agent_BootCount < 2) 
 //            if(agent_BootCount == 1) // only on first cold boot
 //            {
-//                server.log("** send Xively name!");
-                device.send("XivelyName", {XivelyName = agent_myxivelyname});
+                local pump = agent_myxivelyname.find("Pump");
+                server.log("** send Xively name "+agent_myxivelyname+" "+((pump==null)?"PUMP NO":"PUMP YES"));
+                device.send("XivelyName", {XivelyName = agent_myxivelyname, XivelyType = ((pump==null)?"PUMP NO":"PUMP YES")});
 //            }
             break;
         } // if (key.impid == agent_myimpid)
@@ -166,8 +170,9 @@ local agent_BootCount = impid.BootCount;
 });
 
 
-function fetchNewSetpoint() {
-
+// Get new quarts per day set point from Xively channel
+function fetchNewSetpoint() 
+{
     local getValueURL = format(
         "%s%d%s%s%s",
         "https://wellmark.webscript.io/get-xively-channel-value?feedID=",
@@ -188,7 +193,9 @@ function fetchNewSetpoint() {
     });
 }
 
-function fetchNewAlarmHigh() {
+// Get new high alarm value from Xively channel
+function fetchNewAlarmHigh() 
+{
 
     local getValueURL = format(
         "%s%d%s%s%s",
@@ -211,8 +218,9 @@ function fetchNewAlarmHigh() {
     });
 }
 
-function fetchNewAlarmLow() {
-
+// Get new low alarm value from Xively channel
+function fetchNewAlarmLow() 
+{
     local getValueURL = format(
         "%s%d%s%s%s",
         "https://wellmark.webscript.io/get-xively-channel-value?feedID=",
@@ -234,7 +242,9 @@ function fetchNewAlarmLow() {
     });
 }
 
-function fetchTags() {
+// Get info from Xively tags
+function fetchTags() 
+{
 
     local getValueURL = format(
         "%s%d%s%s%s",
@@ -257,8 +267,9 @@ function fetchTags() {
     });
 }
 
-device.on("csv", function(csv) {
-    
+// Send Xively csv data package from Imp
+device.on("csv", function(csv) 
+{
     if (csv.len() > 0)
     {
         server.log("Sending Xively " + agent_myxivelyname + " this data: " + csv);    
@@ -273,7 +284,8 @@ device.on("csv", function(csv) {
             fetchNewSetpoint();
         });
     }
-    else {
+    else 
+    {
         server.log("Nothing to send to Xively.");    
         fetchNewSetpoint();
     }
