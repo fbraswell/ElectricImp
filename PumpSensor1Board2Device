@@ -3,36 +3,42 @@
 imp.setpowersave(true);                                                                                                                                           
                                                                                                                                                                   
 disconnectReason <- "";                                                                                                                                           
-function getDisconnectReason(reason) {                                                                                                                            
-    if (reason == NO_WIFI) {                                                                                                                                      
-        return "Wifi went away";                                                                                                                                  
+function getDisconnectReason(reason) 
+{                                                                                                                            
+    if (reason == NO_WIFI) 
+    {    return "Wifi went away";                                                                                                                                  
     }                                                                                                                                                             
-    if (reason == NO_IP_ADDRESS) {                                                                                                                                
-        return "Failed to get IP address";                                                                                                                        
+    if (reason == NO_IP_ADDRESS) 
+    {   return "Failed to get IP address";                                                                                                                        
     }                                                                                                                                                             
-    if (reason == NO_SERVER) {                                                                                                                                    
-        return "Failed to connect to server";                                                                                                                     
+    if (reason == NO_SERVER) 
+    {   return "Failed to connect to server";                                                                                                                     
     }                                                                                                                                                             
-    if (reason == NOT_RESOLVED) {                                                                                                                                 
-        return "Failed to resolve server";                                                                                                                        
+    if (reason == NOT_RESOLVED) 
+    {   return "Failed to resolve server";                                                                                                                        
     }                                                                                                                                                             
     return ""                                                                                                                                                     
 }                                                                                                                                                                 
                                                                                                                                                                   
-function onConnected(status) {                                                                                                                                    
-    if (status == SERVER_CONNECTED) {                                                                                                                             
+function onConnected(status) 
+{                                                                                                                                    
+    if (status == SERVER_CONNECTED) 
+    {                                                                                                                             
         server.log("Reconnected after unexpected disconnect " +  disconnectReason);                                                                               
     }                                                                                                                                                      
 }
 
-function tryToConnect() {                                                                                                                                          
-    if (!server.isconnected()) {                                                                                                                                  
+function tryToConnect() 
+{                                                                                                                                          
+    if (!server.isconnected()) 
+    {                                                                                                                                  
         server.connect(onConnected, 30);                                                                                                                          
         imp.wakeup(120, tryToConnect);                                                                                                                            
     }                                                                                                                                                            
 } 
 
-function onUnexpectedDisconnect(status) {                                                                                                                         
+function onUnexpectedDisconnect(status) 
+{                                                                                                                         
     disconnectReason = getDisconnectReason(status);                                                                                         
     imp.wakeup(120, tryToConnect);                                                                                                         
 }  
@@ -46,39 +52,21 @@ function onUnexpectedDisconnect(status) {
 // Can read analog pressure if needed
 // Reads flow meter Hall effect switch
 
-function getGallons() {
-                                                                                                                                                                 
-    local analogval = hardware.pin7.read(); // 0 - 65535                                                                                                          
-                                                                            
-    local volts = (hardware.voltage()/4096.0) * (analogval/16.0); // calc pressure here                                                                           
-                                                                                   
-    local pressure = 63.0/70.0 * volts;                                                                                                                           
-    local density = 0.82; // density of crude oil                                                                                                                 
-    density = 0.035714;                                                                                                                                           
-    local inches = 70 * volts - 35.0;                                                                                                                             
-                                                                                                                                                                  
-    //inches *= inchScale; // scale 16 inches to 144 inches for testing                                                                                             
-                                                                                                                                                            
-    local feet = (50631.0 - analogval) * 0.00042919;                                      
-    
-    return feet * 12.0 / 72.0;
-}
-
-function getVolts() {
-                                                                                                                                                                 
-    local analogval = hardware.pin7.read(); // 0 - 65535                                                                                                          
-                                                                            
-    local volts = (hardware.voltage()/4096.0) * (analogval/16.0); // calc pressure here                                                                           
-                                        
+function getVolts() 
+{
+    local analogval = hardware.pin7.read(); // 0 - 65535 
+    local volts = (hardware.voltage()/4096.0) * (analogval/16.0);
     return volts;
 }
 
-function byteArrayString(arr){
+function byteArrayString(arr)
+{
     local str = ""
-    for(local i = 0; i < arr.len(); i++){
+    for(local i = 0; i < arr.len(); i++)
+    {
         if(arr[i] == null) break;
-            str = str + format("%.2X ", arr[i]);
-        }
+        str = str + format("%.2X ", arr[i]);
+    }
     return str;
 }
 
@@ -105,6 +93,7 @@ agent.on("XivelyName", function(XivelyName)
 {
 //    nv <- {gformin = interval.interval};
     nv.xively <- XivelyName.XivelyName;
+    nv.type <- XivelyName.XivelyType;
 //    gformin = interval.interval;
 //    server.log("**Received Xively Name: "+nv.xively);
 });
@@ -115,11 +104,14 @@ agent.on("XivelyName", function(XivelyName)
 // The board uses the RTS signal to control the direction of the data on 
 // the RS-485 wires
  
-function readSerial() {
+function readSerial() 
+{
     local result = hardware.uart1289.read();
-    if (result == -1) {
+    if (result == -1) 
+    {
         server.show("No data returned.");
-    } else {
+    } else 
+    {
         server.show(format("%x", result));
     }
  
@@ -130,12 +122,15 @@ function writeRegisterRequest()
     hardware.uart1289.write(0xxx);
 }
 
-function setMotorState(state) {
+function setMotorState(state) 
+{
     local motorCommand = [];
-    if (state == 1) {
+    if (state == 1) 
+    {
       motorCommand = [ 0x10, 0x05, 0x00, 0x01, 0xFF, 0x00, 0xDE, 0xBB ];
     }
-    else {
+    else 
+    {
         motorCommand = [ 0x10, 0x05, 0x00, 0x01, 0x00, 0x00, 0x9F, 0x4B ]; 
     }
     
@@ -143,7 +138,8 @@ function setMotorState(state) {
     imp.sleep(100.0/1000.0);
     hardware.pin2.write(1);
 //    imp.sleep(100.0/1000.0);
-    foreach(val in motorCommand) {
+    foreach(val in motorCommand) 
+    {
         hardware.uart1289.write(val);
     }
     imp.sleep(10.0/1000.0);
@@ -151,7 +147,8 @@ function setMotorState(state) {
     imp.sleep(100.0/1000.0);
 }
 
-function writeQuartsPerDay(value) {
+function writeQuartsPerDay(value) 
+{
     // hex string "10 06 00 03 41 28 00 00 F7 33"
     // Modbus address - 0x10
     // command - 0x06
@@ -164,7 +161,8 @@ function writeQuartsPerDay(value) {
     else
         setMotorState(0);
     
-    if (value > 0.1) {
+    if (value > 0.1) 
+    {
         
 //        local qpdCommand = [ 0x10, 0x06, 0x00, 0x03 ];
          local qpdCommand = [ 0x10, 0x10, 0x00, 0x03, 0x00, 0x02, 0x04 ];
@@ -185,7 +183,8 @@ function writeQuartsPerDay(value) {
         imp.sleep(10.0/1000.0);
         hardware.pin2.write(1);
 //        imp.sleep(10.0/1000.0);
-        foreach(val in qpdCommand) {
+        foreach(val in qpdCommand) 
+        {
             hardware.uart1289.write(val);
         }
         imp.sleep(15.0/1000.0);
@@ -197,14 +196,14 @@ function writeQuartsPerDay(value) {
          local byte = -1;
     // The a stands for all bytes but I didn't want to type it out so many times.
         local a = [];
-        while ((byte = hardware.uart1289.read()) != -1) {
+        while ((byte = hardware.uart1289.read()) != -1) 
+        {
             a.append(byte);
             imp.sleep(100.0/1000.0);
          }
 //        server.log("received: "+byteArrayString(a));
-        
-    }
-}
+    } // if (value > 0.1) 
+} // function writeQuartsPerDay(value) 
 
 function writeOnTime()
 {
@@ -219,6 +218,7 @@ function writeOnTime()
     // 10 06 xx xx 05 xx xx
     // compose the string with the CRC at the end
 }
+
 function writeOffTime()
 {
     // hex string "10 06 00 01 00 05 1B 48"
@@ -242,10 +242,11 @@ function writeOffTime()
 
 function xbyteArrayString(arr){
     local str = ""
-    for(local i = 0; i < arr.len(); i++){
+    for(local i = 0; i < arr.len(); i++)
+    {
         if(arr[i] == null) break;
-            str = str + format("%.2X ", arr[i]);
-        }
+        str = str + format("%.2X ", arr[i]);
+    }
     return str;
 }
 
@@ -261,7 +262,8 @@ function calculateCRC ( puchMsg, usDataLen ){
     local uchCRCLo = 0xFF ; // low byte of CRC initialized
     local uIndex ; // will index into CRC lookup table
     local i = 0;
-    while (usDataLen--){ // pass through message buffer
+    while (usDataLen--)
+    { // pass through message buffer
         uIndex = uchCRCLo ^ puchMsg[i] ; // calculate the CRC
         uchCRCLo = uchCRCHi ^ auchCRCHi[uIndex] ;
         uchCRCHi = auchCRCLo[uIndex] ;
@@ -280,30 +282,49 @@ function requestRegisterInfo()
     local crc = calculateCRC(requestRegisters, requestRegisters.len());
     requestRegisters.extend(crc);
     // This requests the register data
-    foreach(val in requestRegisters) {
+    foreach(val in requestRegisters) 
+    {
         hardware.uart1289.write(val);
     }
 }
 //local crc = calculateCRC([ 0x10, 0x03, 0x00, 0x00, 0x00, 0x0F ], 6);
 //server.log(format("CRC: %x %x", crc[0], crc[1]));
 
-server.log("Configure!");
-// configure a pin group for UART TX/RX. RTS is used, but not CTS
+// server.log("Configure!");
 
+// configure a pin group for UART TX/RX. RTS is used, but not CTS
 hardware.uart1289.configure(9600, 8, PARITY_NONE, 1, NO_CTSRTS);
 hardware.pin2.configure(DIGITAL_OUT);
 hardware.pin7.configure(ANALOG_IN);
 
 
+/*
+// hardware.pin1.configure(DIGITAL_IN_PULLUP);                                                                                                                    
+hardware.pin1.configure(DIGITAL_IN_PULLUP);                                                                                                                       
+// hardware.pin1.configure(DIGITAL_IN_PULLUP);                                                                                                                    
+hardware.pin2.configure(DIGITAL_IN_PULLUP);                                                                                                                       
+// Analog read on pin 5 for temp                                                                                                                                  
+hardware.pin5.configure(ANALOG_IN);                                                                                                                               
+// Analog read on pin 7 for pressure                                                                                                                              
+hardware.pin7.configure(ANALOG_IN); 
+// Digital Write on pin 8 - control 3V regulator for sensors                                                                                                      
+hardware.pin8.configure(DIGITAL_OUT);
+// Analog read on pin 9 for scaled battery voltage                                                                                                                             
+hardware.pin9.configure(ANALOG_IN); 
+*/
+
+
 // take pulse samples for the last 5 minutes
-function getFlowRate() {
+function getFlowRate() 
+{
     //3785.4 pulses per gallon, 4 quarts in a gallon
     //122 pulses per minute
     //16.387 pulses per cubic inch
     return nv.pulses.len() / 3785.4 / 4 / 2;
 }
 
-hardware.pin5.configure(DIGITAL_IN, function() {
+hardware.pin5.configure(DIGITAL_IN, function() 
+{
     local now = time();
 //    nv.pulses.append(now);
     nv.flowcnt++;
@@ -327,7 +348,8 @@ hardware.pin5.configure(DIGITAL_IN, function() {
 local boot = "cold";                                                                                                                                              
 if (("nv" in getroottable()) && ("count" in nv))                                                                                                                  
 {   // warm boot - nv present                                                                                                                                     
-    nv.count++;                                                                                                                                                   
+    nv.count++;
+    nv.Status_BootPass = nv.count;
     // Display the sleep count on our node                                                                                                                        
 //    server.show("--------Start Program------------Warm Boot Pass #" + nv.count);                                                                                  
 //    server.log("--------Start Program------------Warm Boot Pass #" + nv.count);                                                                                   
@@ -338,16 +360,34 @@ else
 {   // cold boot - create nv & init count                                                                                                                         
     // Get Xively Name
 //    imp.sleep(5.0);
-    nv <- {
+    nv <- 
+    {
         pulses = [],
         count = 1,
         flowcnt = 0,
         gformin = 10,
         ssid = imp.getssid(),
         impID = hardware.getimpeeid(),
-        xively = "No Name Yet"
+        xively = "No Name Yet",
+        type = "No Type Yet",
+        MB_OnTime = -1,
+        MB_OffTime = -1, 
+        MB_TempSetPoint = -1, 
+        MB_QuartsPerDay = -1, 
+        MB_Cycles = -1,
+        MB_Temperature = -1,
+        MB_PlungerSize = -1,
+        MB_PinPosition = -1,
+        MB_MotorSize = -1,
+        MB_BatteryVoltage = -1,
+        MB_VersionNumber = -1,
+        Volts = -1,
+        Status_ImpVolts = -1,
+        Status_Signal_Strength = -1,
+        FlowCount = -1, 
+        Status_BootPass = 1
     };
-    
+   
     agent.send("impid", {ImpID = format("%s",hardware.getimpeeid()), BootCount = 1});
     local i = 0;
     // Wait for Agent to return Xively name
@@ -372,23 +412,28 @@ else
 imp.enableblinkup(true);                                                                                                                                          
 
 local endtime = hardware.millis() + 10 * 1000; // set the end time by adding msecs                                                                                
-while(boot == "cold" && (endtime - hardware.millis()) > 0) {                                                                                                      
-    if (hardware.millis()%1000 == 0) {                                                                                                                            
+while(boot == "cold" && (endtime - hardware.millis()) > 0) 
+{                                                                                                      
+    if (hardware.millis()%1000 == 0) 
+    {                                                                                                                            
         server.log("Blink up anyone?");                                                                                                                           
     }                                                                                                                                                             
-    if ((endtime - hardware.millis()) < 0) { // time expired?                                                                                                     
+    if ((endtime - hardware.millis()) < 0) 
+    { // time expired?                                                                                                     
         break;                                                                                                                                                    
     }                                                                                                                                                             
 }               
 
 imp.sleep(1.0);
 
-agent.on("newsetpoint", function(newsetpoint) {
+agent.on("newsetpoint", function(newsetpoint) 
+{
     server.log("Setting QuartsPerDay to: " + newsetpoint);
     writeQuartsPerDay(newsetpoint);
 });
 
-function handleModbus() {
+function handleModbus() 
+{
     local d = date(); 
     server.log(format("%02d-%02d-%d %02d:%02d.%02d, IMP: %6.1f rssi, %6.3f v, mem %d, ID: %s, bssid: %s, macaddr: %s",       
                         d.month+1, d.day, d.year, d.hour, d.min, d.sec,                                                                                           
@@ -425,7 +470,8 @@ function handleModbus() {
     local byte = -1;
     // The a stands for all bytes but I didn't want to type it out so many times.
     local a = [];
-    while ((byte = hardware.uart1289.read()) != -1) {
+    while ((byte = hardware.uart1289.read()) != -1) 
+    {
         a.append(byte);
         imp.sleep(100.0/1000.0);
     }
@@ -449,7 +495,8 @@ function handleModbus() {
         qpd.seek(0, 'b');
         local quartsPerDay = qpd.readn('f');
         
-        csvPayload = format("%s,%d\n%s,%d\n%s,%.2f\n%s,%.2f\n%s,%d\n%s,%d\n%s,%d\n%s,%d\n%s,%d\n%s,%.2f\n%s,%d\n%s,%.4f", // \n%s,%.2f\n%s,%.2f"   // \n%s,%d\n%s,%.2f", // \n%s,%d",
+        csvPayload = 
+        format("%s,%d\n%s,%d\n%s,%.2f\n%s,%.2f\n%s,%d\n%s,%d\n%s,%d\n%s,%d\n%s,%d\n%s,%.2f\n%s,%d", // \n%s,%.2f\n%s,%.2f"   // \n%s,%d\n%s,%.2f", // \n%s,%d",
             "MB_OnTime", onTime,
             "MB_OffTime", offTime,
             "MB_TempSetPoint", (a[7] << 8) | a[8],
@@ -460,16 +507,17 @@ function handleModbus() {
             "MB_PinPosition", (a[21] << 8) | a[22],
             "MB_MotorSize", (a[23] << 8) | a[24],
             "MB_BatteryVoltage", (a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28], // not working
-            "MB_VersionNumber", (a[29] << 24) | (a[30] << 16) | (a[31] << 8) | a[32],
-//            "Gallons", getGallons(),
+            "MB_VersionNumber", (a[29] << 24) | (a[30] << 16) | (a[31] << 8) | a[32]
 //            "FlowRate", getFlowRate()
 //          ,  "ADCval", hardware.pin7.read(),
-            "Volts", (hardware.voltage()/4096.0) * (hardware.pin7.read()/16.0)
+//            "Volts", (hardware.voltage()/4096.0) * (hardware.pin7.read()/16.0)
+//            "Volts", getVolts()
 //             , "Signal_Strength", imp.rssi()
         );
         agent.send("csv", csvPayload);
 //        server.log("Sending Payload: ");
 //        server.log(csvPayload);
+// DEBUG - MB_BatteryVoltage
         server.log(format("%s,%8.2f, %s,%8.2f, %s,%8.2f, %s,%8.2f, %s,%8.2f, %s%12d",
         "MB_BatteryVoltage ", (a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28],
         "MB_BV swap ", (a[25] << 8) | (a[26] << 0) | (a[27] << 24) | (a[28] << 16),
@@ -479,14 +527,16 @@ function handleModbus() {
         "MB_BV int ", (a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28]
         ));
     }
-    else {
+    else 
+    {
         server.log("Can't read MODBUS registers!");
     }
     
-    agent.send("csv",format("%s,%6.1f\n%s,%6.3f\n%s,%d\n%s,%d", 
+    agent.send("csv",format("%s,%6.1f\n%s,%6.3f\n%s,%d\n%s,%.4f\n%s,%d", 
     "Status_ImpVolts", hardware.voltage(), 
     "Status_Signal_Strength", imp.rssi(),
     "FlowCount", nv.flowcnt,
+    "Volts", getVolts(),
     "Status_BootPass", nv.count
     ));
     
