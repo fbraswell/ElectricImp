@@ -23,8 +23,7 @@ function getDisconnectReason(reason)
 function onConnected(status) 
 {                                                                                                                                    
     if (status == SERVER_CONNECTED) 
-    {                                                                                                                             
-        server.log("Reconnected after unexpected disconnect " +  disconnectReason);                                                                               
+    {   server.log("Reconnected after unexpected disconnect " +  disconnectReason);                                                                               
     }                                                                                                                                                      
 }
 
@@ -52,10 +51,49 @@ function onUnexpectedDisconnect(status)
 // Can read analog pressure if needed
 // Reads flow meter Hall effect switch
 
+function getTemp()                                                                                                                                                
+{                                                                                                                                                                 
+    local analogval = hardware.pin5.read(); // 0 - 65535                                                                                                          
+    local tempC = ((analogval * 0.00005035)-0.5)*100.0;                                                                                                           
+    local tempF = (9.0/5.0)*tempC + 32.0;                                                                                                                         
+    nv.Temperature = tempF; // set global temp var                                                                                                                         
+//    agent.send("Temperature",{kind="Temperature", key=COSMKey, feed=COSMFeed, value=tempF });                                                                     
+/*
+    local d = date();                                                                                                                                             
+    if(tempF >= triggerTemp)                                                                                                                                      
+    {                                                                                                                                                             
+//        agent.send("sendSMS", { mess= format("Temperature Trigger: %6.3f reached! %s", tempF, impID), highlevelalarm= 0, other=1});                                                                    
+        if(!triggerTempCrossOver) // just crossed over                                                                                                            
+        {                                                                                                                                                         
+            triggerTempCrossOver = 1;                                                                                                                             
+        }                                                                                                                                                         
+    } else if(tempF < triggerTemp * 0.90) // temp is less than trigger less 10%                                                                                   
+    {                                                                                                                                                             
+        // this allows some hysteresis                                                                                                                            
+        triggerTempCrossOver = 0;                                                                                                                                 
+    } 
+*/
+    return tempF;
+}                                                                                                                                                                 
+                 
+// The imp has 12 bit ADC and maps it across 65536 range                                                                                                          
+// so 0-3.3V maps to 0-65535  
+function getBatteryVoltage()
+{
+    local adval = hardware.pin9.read(); // 0 - 65535
+    local volts = (hardware.voltage()/4096.0) * (adval/16.0); 
+    // R1 = 357k and R2 = 96.7k (actual measurements)
+    // Vbat = V (R1 + R2)/R2    // from the voltage divider
+    local vbat = volts * (357.0 + 100.0)/100.0;
+    nv.Status_vbat = vbat; // assign to global variable
+    return vbat;
+}
+
 function getVolts() 
 {
     local analogval = hardware.pin7.read(); // 0 - 65535 
     local volts = (hardware.voltage()/4096.0) * (analogval/16.0);
+    nv.Volts = volts;
     return volts;
 }
 
@@ -72,30 +110,38 @@ function byteArrayString(arr)
 
 // Pass values from agent to device with these routines
 
-agent.on("interval", function(interval)
-{
-//    nv <- {gformin = interval.interval};
-    nv.gformin <- interval.interval;
-//    gformin = interval.interval;
-//    server.log("**Received sample interval: "+nv.gformin);
+// Get quarts per day info
+agent.on("newsetpoint", 
+    function(newsetpoint) 
+    {
+        server.log("Setting QuartsPerDay to: " + newsetpoint);
+        writeQuartsPerDay(newsetpoint);
+    });
+
+// Get sample interval from agent
+agent.on("interval", 
+    function(interval)
+    {
+        nv.gformin <- interval.interval;
+    //    server.log("**Received sample interval: "+nv.gformin);
 });
 
-agent.on("voltage_enable", function(voltage_enable)
-{
-//    nv <- {voltage_enable = voltage_enable.voltage_enable};
-    nv.voltage_enable <- voltage_enable.voltage_enable;
-//    voltage_enable = voltage_enable.voltage_enable;
-//    voltage_enable = nv.voltage_enable;
-//    server.log("***Received voltage_enable: "+nv.voltage_enable);
+// get voltage enable from agent
+// determines the polarity of enable signal
+agent.on("voltage_enable", 
+    function(voltage_enable)
+    {
+        nv.voltage_enable <- voltage_enable.voltage_enable;
+    //    server.log("***Received voltage_enable: "+nv.voltage_enable);
 });
 
-agent.on("XivelyName", function(XivelyName)
-{
-//    nv <- {gformin = interval.interval};
-    nv.xively <- XivelyName.XivelyName;
-    nv.type <- XivelyName.XivelyType;
-//    gformin = interval.interval;
-//    server.log("**Received Xively Name: "+nv.xively);
+// Get name of Xively feed
+agent.on("XivelyName", 
+    function(XivelyName)
+    {
+        nv.xively <- XivelyName.XivelyName;
+        nv.type <- XivelyName.XivelyType;
+    //    server.log("**Received Xively Name: "+nv.xively);
 });
 
 // UART Communication example for the Modbus communication
@@ -103,25 +149,27 @@ agent.on("XivelyName", function(XivelyName)
 // Data will be sent form the Imp to the Spark Fun RS-485 break-out board
 // The board uses the RTS signal to control the direction of the data on 
 // the RS-485 wires
- 
+
+/*  --- not used any more
 function readSerial() 
 {
     local result = hardware.uart1289.read();
     if (result == -1) 
-    {
-        server.show("No data returned.");
+    {   server.show("No data returned.");
     } else 
-    {
-        server.show(format("%x", result));
+    {   server.show(format("%x", result));
     }
- 
 }
+*/
 
+/*  ---- not used any more
 function writeRegisterRequest()
-{
-    hardware.uart1289.write(0xxx);
+{   hardware.uart1289.write(0xxx);
 }
+*/
 
+// Turn motor on/off
+// If quarts per day is set to 0, turn motor off
 function setMotorState(state) 
 {
     local motorCommand = [];
@@ -147,6 +195,8 @@ function setMotorState(state)
     imp.sleep(100.0/1000.0);
 }
 
+// Handle quarts per day settings
+// If qpd set to 0, turn motor off
 function writeQuartsPerDay(value) 
 {
     // hex string "10 06 00 03 41 28 00 00 F7 33"
@@ -163,7 +213,6 @@ function writeQuartsPerDay(value)
     
     if (value > 0.1) 
     {
-        
 //        local qpdCommand = [ 0x10, 0x06, 0x00, 0x03 ];
          local qpdCommand = [ 0x10, 0x10, 0x00, 0x03, 0x00, 0x02, 0x04 ];
         
@@ -184,8 +233,7 @@ function writeQuartsPerDay(value)
         hardware.pin2.write(1);
 //        imp.sleep(10.0/1000.0);
         foreach(val in qpdCommand) 
-        {
-            hardware.uart1289.write(val);
+        {   hardware.uart1289.write(val);
         }
         imp.sleep(15.0/1000.0);
         hardware.pin2.write(0);
@@ -231,7 +279,6 @@ function writeOffTime()
     // prepare data stream by filling in the off time integer
     // 10 06 xx xx 05 xx xx
     // compose the string with the CRC at the end
-    
 }
 
 // CRC calculation code below is needed for the Modbus
@@ -255,7 +302,8 @@ const auchCRCHi = "\x00\xC1\x81\x40\x01\xC0\x80\x41\x01\xC0\x80\x41\x00\xC1\x81\
 // blob of CRC values for low–order byte
 const auchCRCLo = "\x00\xC0\xC1\x01\xC3\x03\x02\xC2\xC6\x06\x07\xC7\x05\xC5\xC4\x04\xCC\x0C\x0D\xCD\x0F\xCF\xCE\x0E\x0A\xCA\xCB\x0B\xC9\x09\x08\xC8\xD8\x18\x19\xD9\x1B\xDB\xDA\x1A\x1E\xDE\xDF\x1F\xDD\x1D\x1C\xDC\x14\xD4\xD5\x15\xD7\x17\x16\xD6\xD2\x12\x13\xD3\x11\xD1\xD0\x10\xF0\x30\x31\xF1\x33\xF3\xF2\x32\x36\xF6\xF7\x37\xF5\x35\x34\xF4\x3C\xFC\xFD\x3D\xFF\x3F\x3E\xFE\xFA\x3A\x3B\xFB\x39\xF9\xF8\x38\x28\xE8\xE9\x29\xEB\x2B\x2A\xEA\xEE\x2E\x2F\xEF\x2D\xED\xEC\x2C\xE4\x24\x25\xE5\x27\xE7\xE6\x26\x22\xE2\xE3\x23\xE1\x21\x20\xE0\xA0\x60\x61\xA1\x63\xA3\xA2\x62\x66\xA6\xA7\x67\xA5\x65\x64\xA4\x6C\xAC\xAD\x6D\xAF\x6F\x6E\xAE\xAA\x6A\x6B\xAB\x69\xA9\xA8\x68\x78\xB8\xB9\x79\xBB\x7B\x7A\xBA\xBE\x7E\x7F\xBF\x7D\xBD\xBC\x7C\xB4\x74\x75\xB5\x77\xB7\xB6\x76\x72\xB2\xB3\x73\xB1\x71\x70\xB0\x50\x90\x91\x51\x93\x53\x52\x92\x96\x56\x57\x97\x55\x95\x94\x54\x9C\x5C\x5D\x9D\x5F\x9F\x9E\x5E\x5A\x9A\x9B\x5B\x99\x59\x58\x98\x88\x48\x49\x89\x4B\x8B\x8A\x4A\x4E\x8E\x8F\x4F\x8D\x4D\x4C\x8C\x44\x84\x85\x45\x87\x47\x46\x86\x82\x42\x43\x83\x41\x81\x80\x40";
  
-function calculateCRC ( puchMsg, usDataLen ){
+function calculateCRC ( puchMsg, usDataLen )
+{
     //unsigned char *puchMsg ; // message to calculate CRC upon
     //unsigned short usDataLen ; // quantity of bytes in message
     local uchCRCHi = 0xFF ; // high byte of CRC initialized
@@ -283,36 +331,11 @@ function requestRegisterInfo()
     requestRegisters.extend(crc);
     // This requests the register data
     foreach(val in requestRegisters) 
-    {
-        hardware.uart1289.write(val);
+    {   hardware.uart1289.write(val);
     }
 }
 //local crc = calculateCRC([ 0x10, 0x03, 0x00, 0x00, 0x00, 0x0F ], 6);
 //server.log(format("CRC: %x %x", crc[0], crc[1]));
-
-// server.log("Configure!");
-
-// configure a pin group for UART TX/RX. RTS is used, but not CTS
-hardware.uart1289.configure(9600, 8, PARITY_NONE, 1, NO_CTSRTS);
-hardware.pin2.configure(DIGITAL_OUT);
-hardware.pin7.configure(ANALOG_IN);
-
-
-/*
-// hardware.pin1.configure(DIGITAL_IN_PULLUP);                                                                                                                    
-hardware.pin1.configure(DIGITAL_IN_PULLUP);                                                                                                                       
-// hardware.pin1.configure(DIGITAL_IN_PULLUP);                                                                                                                    
-hardware.pin2.configure(DIGITAL_IN_PULLUP);                                                                                                                       
-// Analog read on pin 5 for temp                                                                                                                                  
-hardware.pin5.configure(ANALOG_IN);                                                                                                                               
-// Analog read on pin 7 for pressure                                                                                                                              
-hardware.pin7.configure(ANALOG_IN); 
-// Digital Write on pin 8 - control 3V regulator for sensors                                                                                                      
-hardware.pin8.configure(DIGITAL_OUT);
-// Analog read on pin 9 for scaled battery voltage                                                                                                                             
-hardware.pin9.configure(ANALOG_IN); 
-*/
-
 
 // take pulse samples for the last 5 minutes
 function getFlowRate() 
@@ -323,114 +346,31 @@ function getFlowRate()
     return nv.pulses.len() / 3785.4 / 4 / 2;
 }
 
-hardware.pin5.configure(DIGITAL_IN, function() 
+function handleSensor()
 {
-    local now = time();
-//    nv.pulses.append(now);
-    nv.flowcnt++;
-    server.log("***state change on pin 5, len: "+nv.pulses.len()+" pin level: "+hardware.pin5.read());
-//    local oldestTime = nv.pulses[0];
-//    local fiveMinutesAgo = now - 5*60*1000;
-    
-//    for (local i=0; i<nv.pulses.len(); i++) {
-//        if (oldestTime >= fiveMinutesAgo) {
-//            nv.pulses = nv.pulses.slice(i);
-//            break
-//        }
-//    }
-});
-
-// hardware.uart12.configure(115200, 8, PARITY_NONE, 1, NO_CTSRTS, readSerial);
- 
-
-// Update a field in the table if it is present                                                                                                                   
-// else initialise the table with a field                                                                                                                         
-local boot = "cold";                                                                                                                                              
-if (("nv" in getroottable()) && ("count" in nv))                                                                                                                  
-{   // warm boot - nv present                                                                                                                                     
-    nv.count++;
-    nv.Status_BootPass = nv.count;
-    // Display the sleep count on our node                                                                                                                        
-//    server.show("--------Start Program------------Warm Boot Pass #" + nv.count);                                                                                  
-//    server.log("--------Start Program------------Warm Boot Pass #" + nv.count);                                                                                   
-    server.log(format("-----Start Program------- Warm Boot Pass #%d, WiFi %s, ID %s, Name: %s, Interval: %d -----", nv.count, nv.ssid, nv.impID, nv.xively, nv.gformin));
-    boot = "warm";                                                                                                                                                
-}                                                                                                                                                                 
-else                                                                                                                                                              
-{   // cold boot - create nv & init count                                                                                                                         
-    // Get Xively Name
-//    imp.sleep(5.0);
-    nv <- 
-    {
-        pulses = [],
-        count = 1,
-        flowcnt = 0,
-        gformin = 10,
-        ssid = imp.getssid(),
-        impID = hardware.getimpeeid(),
-        xively = "No Name Yet",
-        type = "No Type Yet",
-        MB_OnTime = -1,
-        MB_OffTime = -1, 
-        MB_TempSetPoint = -1, 
-        MB_QuartsPerDay = -1, 
-        MB_Cycles = -1,
-        MB_Temperature = -1,
-        MB_PlungerSize = -1,
-        MB_PinPosition = -1,
-        MB_MotorSize = -1,
-        MB_BatteryVoltage = -1,
-        MB_VersionNumber = -1,
-        Volts = -1,
-        Status_ImpVolts = -1,
-        Status_Signal_Strength = -1,
-        FlowCount = -1, 
-        Status_BootPass = 1
-    };
-   
-    agent.send("impid", {ImpID = format("%s",hardware.getimpeeid()), BootCount = 1});
-    local i = 0;
-    // Wait for Agent to return Xively name
-/*
-    while(i++ <= 5 ) // nv.xively == "No Name Yet")
-    {
-//        imp.wakeup(1.0, function(){});
-        imp.sleep(1.0);
-        server.log(nv.xively);
-    }
+    getTemp();
+    getBatteryVoltage()
+    // Package up Imp data for Xively in csv format
+    agent.send("csv",format("%s,%6.1f\n%s,%6.3f\n%s,%d\n%s,%.4f\n%s,%d\n%s,%.4f\n%s,%.4f", 
+    "Status_ImpVolts", hardware.voltage(), 
+    "Status_Signal_Strength", imp.rssi(),
+    "FlowCount", nv.flowcnt,
+    "Volts", getVolts(),
+    "Status_BootPass", nv.count,
+    "Status_vbat", nv.Status_vbat,
+    "Temperature", nv.Temperature
+    ));
+/*        
+    local d = date(); 
+//    imp.sleep(5);
+    imp.onidle(
+        function() 
+        {   imp.wakeup(nv.gformin, 
+                function(){server.sleepfor(0.1);
+                });
+        });
 */
-    // Display the sleep count on our node                                                                                                                        
-//    server.show("--------Start Program------------Cold Boot Pass #" + nv.count);                                                                                  
-//    server.log("--------Start Program------------Cold Boot Pass #" + nv.count);
-    server.log(format("-----Start Program------- Cold Boot Pass #%d, WiFi %s, ID %s, Name: %s, Interval: %d -----", nv.count, nv.ssid, nv.impID, nv.xively, nv.gformin));
-    boot = "cold";  
-    agent.send("sendSMS", {mess="Starting Up Imp Cold Boot! " + hardware.getimpeeid(), highlevelalarm=0, other=1});                                                                                                 
-//    agent.send("sendSMS", "Starting Up Imp Cold Boot! ");
-    
-}                                                                                                                                                                 
-
-imp.enableblinkup(true);                                                                                                                                          
-
-local endtime = hardware.millis() + 10 * 1000; // set the end time by adding msecs                                                                                
-while(boot == "cold" && (endtime - hardware.millis()) > 0) 
-{                                                                                                      
-    if (hardware.millis()%1000 == 0) 
-    {                                                                                                                            
-        server.log("Blink up anyone?");                                                                                                                           
-    }                                                                                                                                                             
-    if ((endtime - hardware.millis()) < 0) 
-    { // time expired?                                                                                                     
-        break;                                                                                                                                                    
-    }                                                                                                                                                             
-}               
-
-imp.sleep(1.0);
-
-agent.on("newsetpoint", function(newsetpoint) 
-{
-    server.log("Setting QuartsPerDay to: " + newsetpoint);
-    writeQuartsPerDay(newsetpoint);
-});
+} // function handleSensor()
 
 function handleModbus() 
 {
@@ -508,15 +448,9 @@ function handleModbus()
             "MB_MotorSize", (a[23] << 8) | a[24],
             "MB_BatteryVoltage", (a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28], // not working
             "MB_VersionNumber", (a[29] << 24) | (a[30] << 16) | (a[31] << 8) | a[32]
-//            "FlowRate", getFlowRate()
-//          ,  "ADCval", hardware.pin7.read(),
-//            "Volts", (hardware.voltage()/4096.0) * (hardware.pin7.read()/16.0)
-//            "Volts", getVolts()
-//             , "Signal_Strength", imp.rssi()
         );
+        // Send Modbus csv data for Xively
         agent.send("csv", csvPayload);
-//        server.log("Sending Payload: ");
-//        server.log(csvPayload);
 // DEBUG - MB_BatteryVoltage
         server.log(format("%s,%8.2f, %s,%8.2f, %s,%8.2f, %s,%8.2f, %s,%8.2f, %s%12d",
         "MB_BatteryVoltage ", (a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28],
@@ -528,10 +462,9 @@ function handleModbus()
         ));
     }
     else 
-    {
-        server.log("Can't read MODBUS registers!");
+    {   server.log("Can't read MODBUS registers!");
     }
-    
+    // Package up Imp data for Xively in csv format
     agent.send("csv",format("%s,%6.1f\n%s,%6.3f\n%s,%d\n%s,%.4f\n%s,%d", 
     "Status_ImpVolts", hardware.voltage(), 
     "Status_Signal_Strength", imp.rssi(),
@@ -539,20 +472,169 @@ function handleModbus()
     "Volts", getVolts(),
     "Status_BootPass", nv.count
     ));
-    
-//    agent.send("impid", {ImpID = format("%s",hardware.getimpeeid())});
-    
-    local d = date(); 
 
+/*    
+    local d = date(); 
 //    imp.sleep(5);
-    imp.onidle(function() 
-    {   imp.wakeup(nv.gformin, function(){server.sleepfor(0.1);});
-//    {   imp.wakeup(10.0, function(){server.sleepfor(0.1);});
-//        server.sleepfor(1.0);
-//        imp.wakeup(9.0, handlemodbus);
-    });
-//    imp.onidle(function() {imp.wakeup(10.0, handleModbus)});
+    imp.onidle(
+        function() 
+        {   imp.wakeup(nv.gformin, 
+                function(){server.sleepfor(0.1);
+                });
+        });
+*/
 } // function handleModbus() 
 
-//sendSMS();
-handleModbus();
+// server.log("Configure!");
+
+hardware.pin5.configure(DIGITAL_IN, 
+    function() 
+    {
+        local now = time();
+    //    nv.pulses.append(now);
+        nv.flowcnt++;
+        server.log("***state change on pin 5, len: "+nv.pulses.len()+" pin level: "+hardware.pin5.read());
+    //    local oldestTime = nv.pulses[0];
+    //    local fiveMinutesAgo = now - 5*60*1000;
+        
+    //    for (local i=0; i<nv.pulses.len(); i++) {
+    //        if (oldestTime >= fiveMinutesAgo) {
+    //            nv.pulses = nv.pulses.slice(i);
+    //            break
+    //        }
+    //    }
+});
+
+// hardware.uart12.configure(115200, 8, PARITY_NONE, 1, NO_CTSRTS, readSerial);
+ 
+// Update a field in the table if it is present                                                                                                                   
+// else initialise the table with a field                                                                                                                         
+local boot = "cold";                                                                                                                                              
+if (("nv" in getroottable()) && ("count" in nv))                                                                                                                  
+{   // warm boot - nv present                                                                                                                                     
+    nv.count++;
+    nv.Status_BootPass = nv.count;
+    // Display the sleep count on our node                                                                                                                        
+//    server.log("--------Start Program------------Warm Boot Pass #" + nv.count);                                                                                   
+    server.log(format("-----Start Program------- Warm Boot Pass #%d, WiFi %s, ID %s, Name: %s, Interval: %d -----", nv.count, nv.ssid, nv.impID, nv.xively, nv.gformin));
+    boot = "warm";                                                                                                                                                
+}                                                                                                                                                                 
+else                                                                                                                                                              
+{   // cold boot - create nv & init count                                                                                                                         
+    // Get Xively Name
+//    imp.sleep(5.0);
+    nv <- 
+    {
+        pulses = [],
+        count = 1,
+        flowcnt = 0,
+        gformin = 10,
+        ssid = imp.getssid(),
+        impID = hardware.getimpeeid(),
+        xively = "No Name Yet",
+        type = "No Type Yet",
+        MB_OnTime = -1,
+        MB_OffTime = -1, 
+        MB_TempSetPoint = -1, 
+        MB_QuartsPerDay = -1, 
+        MB_Cycles = -1,
+        MB_Temperature = -1,
+        MB_PlungerSize = -1,
+        MB_PinPosition = -1,
+        MB_MotorSize = -1,
+        MB_BatteryVoltage = -1,
+        MB_VersionNumber = -1,
+        Volts = -1,
+        Status_ImpVolts = -1,
+        Status_Signal_Strength = -1,
+        FlowCount = -1, 
+        Status_BootPass = 1,
+        Temperature = -1,
+        Status_vbat = -1,
+        Switch = -1,
+        Switch1 = -1
+    };
+   
+    agent.send("impid", {ImpID = format("%s",hardware.getimpeeid()), BootCount = 1});
+    local i = 0;
+    // Wait for Agent to return Xively name
+/*
+    while(i++ <= 5 ) // nv.xively == "No Name Yet")
+    {
+//        imp.wakeup(1.0, function(){});
+        imp.sleep(1.0);
+        server.log(nv.xively);
+    }
+*/
+    // Display the sleep count on our node                                                                                                                        
+    server.log(format("-----Start Program------- Cold Boot Pass #%d, WiFi %s, ID %s, Name: %s, Interval: %d -----", nv.count, nv.ssid, nv.impID, nv.xively, nv.gformin));
+    boot = "cold";  
+//    agent.send("sendSMS", {mess="Starting Up Imp Cold Boot! " + hardware.getimpeeid(), highlevelalarm=0, other=1});
+}                                                                                                                                                                 
+
+imp.enableblinkup(true);                                                                                                                                          
+
+local endtime = hardware.millis() + 10 * 1000; // set the end time by adding msecs                                                                                
+while(boot == "cold" && (endtime - hardware.millis()) > 0) 
+{                                                                                                      
+    if (hardware.millis()%1000 == 0) 
+    {                                                                                                                            
+        server.log("Blink up anyone?");                                                                                                                           
+    }                                                                                                                                                             
+    if ((endtime - hardware.millis()) < 0) 
+    { // time expired?                                                                                                     
+        break;                                                                                                                                                    
+    }                                                                                                                                                             
+}               
+
+imp.sleep(1.0);
+
+// Set up I/O pins
+if(nv.type == "PUMP YES")
+{
+    // Modbus configuration
+    // configure a pin group for UART TX/RX. RTS is used, but not CTS
+    hardware.uart1289.configure(9600, 8, PARITY_NONE, 1, NO_CTSRTS);
+    hardware.pin2.configure(DIGITAL_OUT);
+    hardware.pin7.configure(ANALOG_IN);
+} else
+{ 
+    // Sensor Configuration
+    // hardware.pin1.configure(DIGITAL_IN_PULLUP);                                                                                                                    
+    hardware.pin1.configure(DIGITAL_IN_PULLUP);                                                                                                                       
+    // hardware.pin1.configure(DIGITAL_IN_PULLUP);                                                                                                                    
+    hardware.pin2.configure(DIGITAL_IN_PULLUP);                                                                                                                       
+    // Analog read on pin 5 for temp                                                                                                                                  
+    hardware.pin5.configure(ANALOG_IN);                                                                                                                               
+    // Analog read on pin 7 for pressure                                                                                                                              
+    hardware.pin7.configure(ANALOG_IN); 
+    // Digital Write on pin 8 - control 3V regulator for sensors                                                                                                      
+    hardware.pin8.configure(DIGITAL_OUT);
+    // Analog read on pin 9 for scaled battery voltage                                                                                                                             
+    hardware.pin9.configure(ANALOG_IN); 
+}
+
+// Use first pass for initialzation
+// Second pass and on are normal running
+if(nv.Status_BootPass > 1)
+{
+    // Second pass and on
+    if(nv.type == "PUMP YES")
+    {
+        server.log("--Pump Controller Modbus");
+        handleModbus();
+    } else
+    {
+        server.log("--Sensor Controller");
+        handleSensor();
+    }
+}
+
+local d = date(); 
+//    imp.sleep(5);
+imp.onidle(
+    function() 
+    {   imp.wakeup(nv.gformin, 
+            function(){server.sleepfor(0.1);
+            });
+    });
