@@ -83,6 +83,11 @@ function getBatteryVoltage()
     // Vbat = V (R1 + R2)/R2    // from the voltage divider
     local vbat = volts * (357.0 + 100.0)/100.0;
     nv.Status_vbat = vbat; // assign to global variable
+    
+    // Also get switch values
+    nv.Switch = hardware.pin1.read();
+    nv.Switch1 = hardware.pin2.read();
+    
     return vbat;
 }
 
@@ -174,7 +179,7 @@ function setMotorState(state)
     imp.sleep(10.0/1000.0);
     hardware.pin2.write(0);
     imp.sleep(100.0/1000.0);
-}
+} // function setMotorState(state) 
 
 // Handle quarts per day settings
 // If qpd set to 0, turn motor off
@@ -342,7 +347,7 @@ function handleSensor()
     // enable regulator
 //    hardware.pin8.write(nv.voltage_enable);
 //    for (local i=0; i < 100000; i++){ i = i; } 
-    imp.sleep(0.25); // give sensors time to power up
+    imp.sleep(1.0); // give sensors time to power up
     getTemp();
     getBatteryVoltage()
     getVolts(); // read analog channel
@@ -360,14 +365,16 @@ function handleSensor()
 //    hardware.pin8.write(0x01 ^ nv.voltage_enable);
     agent.send("impid", {ImpID = format("%s",hardware.getimpeeid()), BootCount = nv.count});
     // Package up Imp data for Xively in csv format
-    agent.send("csv",format("%s,%6.1f\n%s,%6.3f\n%s,%d\n%s,%.4f\n%s,%d\n%s,%.4f\n%s,%.4f", 
+    agent.send("csv",format("%s,%6.1f\n%s,%6.3f\n%s,%d\n%s,%.4f\n%s,%d\n%s,%.4f\n%s,%.4f\n%s,%d\n%s,%d", 
     "Status_ImpVolts", hardware.voltage(), 
     "Status_Signal_Strength", imp.rssi(),
     "FlowCount", nv.flowcnt,
     "Volts", nv.Volts,
     "Status_BootPass", nv.count,
     "Status_vbat", nv.Status_vbat,
-    "Temperature", nv.Temperature
+    "Temperature", nv.Temperature,
+    "Switch", nv.Switch,
+    "Switch1", nv.Switch1
     ));
 } // function handleSensor()
 
@@ -388,6 +395,32 @@ function scanWiFi()
 } // function scanWiFi()
 */
 
+// Hall switch function - look for state change on pin
+function flowmetercount() 
+    {
+        local now = time();
+    //    nv.pulses.append(now);
+        nv.flowcnt++;
+        
+    if (nv.board == "No Version Yet") // old board
+    {
+        server.log("***state change on pin 5, len: "+nv.pulses.len()+" pin level: "+hardware.pin5.read());
+    } else if (nv.board == "version_021914") // new board
+    {
+        server.log("***state change on pin 1, len: "+nv.pulses.len()+" pin level: "+hardware.pin1.read());
+    }
+        
+    //    local oldestTime = nv.pulses[0];
+    //    local fiveMinutesAgo = now - 5*60*1000;
+        
+    //    for (local i=0; i<nv.pulses.len(); i++) {
+    //        if (oldestTime >= fiveMinutesAgo) {
+    //            nv.pulses = nv.pulses.slice(i);
+    //            break
+    //        }
+    //    }
+    } // function flowmetercount()
+
 function handleModbus() 
 {
     local d = date(); 
@@ -404,8 +437,8 @@ function handleModbus()
     hardware.pin2.write(0); // Modbus Xmit off
     imp.sleep(10.0/1000.0);
     
-    agent.send("impid", {ImpID = format("%s",hardware.getimpeeid()), BootCount = nv.count});
-    
+//    agent.send("impid", {ImpID = format("%s",hardware.getimpeeid()), BootCount = nv.count});
+    imp.sleep(100.0/1000.0);
 //    agent.send("impid", {ImpID = format("%s",hardware.getimpeeid())});
     
     local byte = -1;
@@ -447,20 +480,22 @@ function handleModbus()
             "MB_PlungerSize", (a[19] << 8) | a[20],
             "MB_PinPosition", (a[21] << 8) | a[22],
             "MB_MotorSize", (a[23] << 8) | a[24],
-            "MB_BatteryVoltage", (a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28], // not working
+            "MB_BatteryVoltage", casti2f((a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28]), // not working
             "MB_VersionNumber", (a[29] << 24) | (a[30] << 16) | (a[31] << 8) | a[32]
         );
         // Send Modbus csv data for Xively
         agent.send("csv", csvPayload);
 // DEBUG - MB_BatteryVoltage
+/*
         server.log(format("%s,%8.2f, %s,%8.2f, %s,%8.2f, %s,%8.2f, %s,%8.2f, %s%12d",
-        "MB_BatteryVoltage ", (a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28],
+        "MB_BatteryVoltage ", casti2f((a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28]),
         "MB_BV swap ", (a[25] << 8) | (a[26] << 0) | (a[27] << 24) | (a[28] << 16),
         "MB_BV reverse ", (a[25] << 0) | (a[26] << 8) | (a[27] << 16) | (a[28] << 24),
         " MB_BV hi ", (a[25] << 24) | (a[26] << 16) ,
         " MB_BV low ", (a[27] << 8) | a[28],
         "MB_BV int ", (a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28]
         ));
+*/
     } else // didn't get Modbus information
     {   
 // DEBUG        server.log("Can't read MODBUS registers!");
@@ -540,57 +575,35 @@ if (("nv" in getroottable()) && ("count" in nv))
         Switch1 = -1
     };
    
+   // Send impID information to agent so it can connect it
+   // to Xively data feed
     agent.send("impid", {ImpID = format("%s",hardware.getimpeeid()), BootCount = 1});
-    local i = 0;
-
+    
+//    local i = 0;
     // Display the sleep count on our node                                                                                                                        
     server.log(format("------- Cold Boot Pass #%d, WiFi %s, ID %s, Name: %s, Interval: %d -----", nv.count, nv.ssid, nv.impID, nv.xively, nv.gformin));
     boot = "cold";  
+
+    imp.enableblinkup(true);                                                                                                                                          
+    
+    local endtime = hardware.millis() + 10 * 1000; // set the end time by adding msecs                                                                                
+    while(boot == "cold" && (endtime - hardware.millis()) > 0) 
+    {                                                                                                      
+        if (hardware.millis()%1000 == 0) 
+        {                                                                                                                            
+            server.log("Blink up anyone?");                                                                                                                           
+        }                                                                                                                                                             
+        if ((endtime - hardware.millis()) < 0) 
+        { // time expired?                                                                                                     
+            break;                                                                                                                                                    
+        }                                                                                                                                                             
+    }               
+    
+    imp.sleep(1.0);
+        // Display the sleep count on our node                                                                                                                        
+    server.log(format("----!!!--- Cold Boot Pass #%d, WiFi %s, ID %s, Name: %s, Interval: %d -----", nv.count, nv.ssid, nv.impID, nv.xively, nv.gformin));
+
 }  // end cold boot section
-
-imp.enableblinkup(true);                                                                                                                                          
-
-local endtime = hardware.millis() + 10 * 1000; // set the end time by adding msecs                                                                                
-while(boot == "cold" && (endtime - hardware.millis()) > 0) 
-{                                                                                                      
-    if (hardware.millis()%1000 == 0) 
-    {                                                                                                                            
-        server.log("Blink up anyone?");                                                                                                                           
-    }                                                                                                                                                             
-    if ((endtime - hardware.millis()) < 0) 
-    { // time expired?                                                                                                     
-        break;                                                                                                                                                    
-    }                                                                                                                                                             
-}               
-
-imp.sleep(1.0);
-
-// Hall switch function - look for state change on pin
-function flowmetercount() 
-    {
-        local now = time();
-    //    nv.pulses.append(now);
-        nv.flowcnt++;
-        
-        if (nv.board == "No Version Yet") // old board
-    {
-        server.log("***state change on pin 5, len: "+nv.pulses.len()+" pin level: "+hardware.pin5.read());
-    } else if (nv.board == "version_021914") // new board
-    {
-        server.log("***state change on pin 1, len: "+nv.pulses.len()+" pin level: "+hardware.pin1.read());
-    }
-        
-        
-    //    local oldestTime = nv.pulses[0];
-    //    local fiveMinutesAgo = now - 5*60*1000;
-        
-    //    for (local i=0; i<nv.pulses.len(); i++) {
-    //        if (oldestTime >= fiveMinutesAgo) {
-    //            nv.pulses = nv.pulses.slice(i);
-    //            break
-    //        }
-    //    }
-    } // function flowmetercount()
 
 // Set up I/O pins
 // Modbus pins setup
@@ -616,6 +629,7 @@ if(nv.type == "PUMP YES")
         hardware.pin7.configure(ANALOG_IN); 
         // Digital Write on pin 5 - control 3V regulator for sensors                                                                                                      
         hardware.pin5.configure(DIGITAL_OUT);
+//        hardware.pin5.write(nv.voltage_enable); // turn it on
     }
   // Sensor only board pins setup
 } else if(nv.type == "PUMP NO")
@@ -649,7 +663,7 @@ if(nv.type == "PUMP YES")
         // Analog read on pin 8 for temp                                                                                                                                  
         hardware.pin8.configure(ANALOG_IN);
     }
-}
+}   // else if(nv.type == "PUMP NO")
 
 // Use first pass for initialzation
 // Second pass and on are normal running
@@ -665,7 +679,7 @@ if(nv.Status_BootPass > 1)
 // DEBUG        server.log("--Sensor Controller");
         handleSensor();
     }
-}
+}   // if(nv.Status_BootPass > 1)
 
 local d = date(); 
 //    imp.sleep(5);
