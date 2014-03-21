@@ -178,7 +178,8 @@ function setMotorState(state)
     }
     imp.sleep(10.0/1000.0);
     hardware.pin2.write(0);
-    imp.sleep(100.0/1000.0);
+//    imp.sleep(100.0/1000.0);
+    imp.sleep(10.0/1000.0);
 } // function setMotorState(state) 
 
 // Handle quarts per day settings
@@ -347,7 +348,7 @@ function handleSensor()
     // enable regulator
 //    hardware.pin8.write(nv.voltage_enable);
 //    for (local i=0; i < 100000; i++){ i = i; } 
-    imp.sleep(1.0); // give sensors time to power up
+    imp.sleep(0.5); // give sensors time to power up
     getTemp();
     getBatteryVoltage()
     getVolts(); // read analog channel
@@ -447,7 +448,8 @@ function handleModbus()
     while ((byte = hardware.uart1289.read()) != -1) 
     {
         a.append(byte);
-        imp.sleep(100.0/1000.0);
+//        imp.sleep(100.0/1000.0);
+        imp.sleep(10.0/1000.0);
     }
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
@@ -498,7 +500,8 @@ function handleModbus()
 */
     } else // didn't get Modbus information
     {   
-// DEBUG        server.log("Can't read MODBUS registers!");
+// DEBUG        
+server.log("Can't read MODBUS registers!");
     }
     if (nv.board == "version_021914")
     {
@@ -665,6 +668,7 @@ if(nv.type == "PUMP YES")
     }
 }   // else if(nv.type == "PUMP NO")
 
+local d = date(); 
 // Use first pass for initialzation
 // Second pass and on are normal running
 if(nv.Status_BootPass > 1)
@@ -672,22 +676,43 @@ if(nv.Status_BootPass > 1)
     // Second pass and on
     if(nv.type == "PUMP YES")
     {
-// DEBUG        server.log("--Pump Controller Modbus");
+// DEBUG
+server.log("--Pump Controller Modbus");
         handleModbus();
+        
+ /*       imp.onidle(
+            function() 
+            {   // Make sure regulator off when idle
+        //        hardware.pin8.write(0x01 ^ nv.voltage_enable);
+                imp.wakeup(nv.gformin, 
+                    function(){server.sleepfor(10.0);
+                    });
+            });
+*/
     } else if(nv.type == "PUMP NO")
     {
-// DEBUG        server.log("--Sensor Controller");
+// DEBUG
+server.log("--Sensor Controller");
         handleSensor();
+        // If this is sensor only, go into deep sleep for
+        // entire time
+//        imp.onidle(function() {server.sleepfor(nv.gformin)});
+        
     }
 }   // if(nv.Status_BootPass > 1)
 
-local d = date(); 
+// local d = date(); 
 //    imp.sleep(5);
+
 imp.onidle(
     function() 
     {   // Make sure regulator off when idle
 //        hardware.pin8.write(0x01 ^ nv.voltage_enable);
         imp.wakeup(nv.gformin, 
-            function(){server.sleepfor(0.1);
+            function(){server.sleepfor(10.0);
             });
     });
+
+//        imp.onidle(function() {server.sleepfor(nv.gformin)});
+
+    
