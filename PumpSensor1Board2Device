@@ -501,8 +501,10 @@ function handleModbus()
     } else // didn't get Modbus information
     {   
 // DEBUG        
-server.log("Can't read MODBUS registers!");
+        server.log("Can't read MODBUS registers!");
     }
+    
+/*    
     if (nv.board == "version_021914")
     {
         // New sensor control on pin 5
@@ -524,6 +526,46 @@ server.log("Can't read MODBUS registers!");
         // leave on all the time
         hardware.pin5.write(nv.voltage_enable);
     }
+*/
+    
+    // Enable regulator
+    if(nv.board == "No Version Yet")
+    {
+        // Old sensor control on pin 8
+        hardware.pin8.write(nv.voltage_enable);
+    } else if (nv.board == "version_021914")
+    {
+        // New sensor control on pin 5
+        hardware.pin5.write(nv.voltage_enable);
+    }
+    // enable regulator
+//    hardware.pin8.write(nv.voltage_enable);
+//    for (local i=0; i < 100000; i++){ i = i; } 
+    imp.sleep(0.5); // give sensors time to power up
+//    getTemp();
+//    getBatteryVoltage()
+    getVolts(); // read analog channel
+    // Disable regulator
+    if(nv.board == "No Version Yet")
+    {
+        // Old sensor control on pin 8
+        hardware.pin8.write(0x01 ^ nv.voltage_enable);
+    } else if (nv.board == "version_021914")
+    {
+        // New sensor control on pin 5
+        hardware.pin5.write(0x01 ^ nv.voltage_enable);
+    }
+    // disable regulator
+//    hardware.pin8.write(0x01 ^ nv.voltage_enable);    
+   // Package up Imp data for Xively in csv format
+    agent.send("csv",format("%s,%6.1f\n%s,%6.3f\n%s,%d\n%s,%.4f\n%s,%d", 
+    "Status_ImpVolts", hardware.voltage(), 
+    "Status_Signal_Strength", imp.rssi(),
+    "FlowCount", nv.flowcnt,
+    "Volts", nv.Volts,
+    "Status_BootPass", nv.count
+    )); 
+    
 } // function handleModbus() 
 
 // server.log("Configure!");
@@ -679,7 +721,7 @@ if(nv.Status_BootPass > 1)
 // DEBUG
 server.log("--Pump Controller Modbus");
         handleModbus();
-        
+//        handleSensor(); // try reading sensor also
  /*       imp.onidle(
             function() 
             {   // Make sure regulator off when idle
@@ -709,7 +751,7 @@ imp.onidle(
     {   // Make sure regulator off when idle
 //        hardware.pin8.write(0x01 ^ nv.voltage_enable);
         imp.wakeup(nv.gformin, 
-            function(){server.sleepfor(10.0);
+            function(){server.sleepfor(1.0);
             });
     });
 
