@@ -24,7 +24,7 @@ impDescriptionTable <- {}; // hold copy of Xively description metadata
 dataForXively <- {}; // hold copy of data for Xively
 afteraminute <- time() + 60;
 afteraminute1 <- time() + 60;
-
+bootpass <- 0; // remember bootpass
 
 function send_sms(number, message) 
 {
@@ -52,7 +52,7 @@ imp_table <-
         // --This agent is for Chemical Pumps only!
         InformaChemPump1 = {   
 //                            impid = "230789eb6e4936ee", 
-                            impid = "232ace4dead3dbee", 
+                            impid = "xx232ace4dead3dbee", 
                             feed = 627874217, apikey = "w1buKrbzAknYTWiVGUsIsYY4C0asD1iF5KErllKbXR3VpEMi"  
                            , sample_interval = 10, voltage_enable = 1
 //                            , board = "version_021914"
@@ -76,23 +76,23 @@ imp_table <-
                                         sample_interval = 10, voltage_enable = 1, 
                                         board = "version_021914"},
         
-        InformaBrineTank2 = {   impid = "232417eb6e4936ee", feed = 670154089, apikey = "j8V2lVnlChthy46Ocv4epRgONhM9Iupu5cltAcfy9KzCk5es",
-                                sample_interval = 600, voltage_enable = 1,
+        InformaBrineTank2 = {   impid = "23748beb6e4936ee", feed = 670154089, apikey = "j8V2lVnlChthy46Ocv4epRgONhM9Iupu5cltAcfy9KzCk5es",
+                                sample_interval = 60, voltage_enable = 1,
                                 board = "version_021914"},
         InformaCrudeTank2 = {   impid = "230789eb6e4936ee", feed = 865841957, apikey = "kql4mJhhNrGWqAimEQOTJkzOSqwXzN2k9YmIFXbBY5n82ZEn", 
                                   sample_interval = 600, voltage_enable = 1,
                                   board = "version_021914"},
         InformaCrudeTank3 = {   impid = "236215eb6e4936ee", feed = 948909259, apikey = "ktZ3HqdtKrecGqiEweyXkPKgFlVPwbt4i1qQ89QVcI9P6T9A", 
+                                  sample_interval = 30, voltage_enable = 1,
+                                  board = "version_021914"},
+        InformaCrudeTank4 = {   impid = "23533ceb6e4936ee", feed = 1749089637, apikey = "NVNPciOUYOjBORWV3OVG6CWf47gIchGCaKXZ9RfCKLMCddsQ", 
                                   sample_interval = 600, voltage_enable = 1,
                                   board = "version_021914"},
-        InformaCrudeTank4 = {   impid = "xx2336aaeb6e4936ee", feed = 1749089637, apikey = "NVNPciOUYOjBORWV3OVG6CWf47gIchGCaKXZ9RfCKLMCddsQ", 
-                                  sample_interval = 10, voltage_enable = 1,
+        InformaCrudeTank5 = {   impid = "233f63eb6e4936ee", feed = 885224893, apikey = "ERhX4wu0gqtY9wF97n5k1GGeNbCbgbiPS2yBLF90MTfDSxw7", 
+                                  sample_interval = 600, voltage_enable = 1,
                                   board = "version_021914"},
-        InformaCrudeTank5 = {   impid = "xx2334c0eb6e4936ee", feed = 885224893, apikey = "ERhX4wu0gqtY9wF97n5k1GGeNbCbgbiPS2yBLF90MTfDSxw7", 
-                                  sample_interval = 10, voltage_enable = 1,
-                                  board = "version_021914"},
-        InformaCrudeTank6 = {   impid = "xx232fb6eb6e4936ee", feed = 151976086, apikey = "rxR2dtQ8vgLexDG1aENmbVbNjqiaqnPYPaO36G81YpJI4KG8", 
-                                  sample_interval = 10, voltage_enable = 1,
+        InformaCrudeTank6 = {   impid = "23637ceb6e4936ee", feed = 151976086, apikey = "rxR2dtQ8vgLexDG1aENmbVbNjqiaqnPYPaO36G81YpJI4KG8", 
+                                  sample_interval = 600, voltage_enable = 1,
                                   board = "version_021914"},
         InformaCrudeTank7 = {   impid = "23365feb6e4936ee", feed = 1004046424, apikey = "tMqHy8cDrhVw1sytc9UHVOLIKoSPFzi25kIg7QOM8vS4qbFq", 
                                   sample_interval = 10, voltage_enable = 1,
@@ -103,22 +103,26 @@ imp_table <-
         InformaCrudeTank9 = {   impid = "231545eb6e4936ee", feed = 196803437, apikey = "GkrQ2cI10qerrSARxOFOPC3gF9TD4cq92CzZwbb6JDkZH1b2", 
                                   sample_interval = 10, voltage_enable = 1,
                                   board = "version_021914"},
-        InformaCrudeTank10 = {   impid = "xx232fb6eb6e4936ee", feed = 2067998933, apikey = "69kb7m0ANPooCYk3AVvioSXsLdXsNTpX9ORlrUE0dd824Le1", 
-                                  sample_interval = 10, voltage_enable = 1,
+        InformaCrudeTank10 = {   impid = "235c87eb6e4936ee", feed = 2067998933, apikey = "69kb7m0ANPooCYk3AVvioSXsLdXsNTpX9ORlrUE0dd824Le1", 
+                                  sample_interval = 600, voltage_enable = 1,
                                   board = "version_021914"},
                                   
         InformaChemTank2 = {   impid = "23484feb6e4936ee", feed = 1995311635, apikey = "EY8ON0sBYDAVmocxjYIrWAxUggZzxcNrrO1R9NsvXyxthfu1"  }, 
 
         DevonChemPump1 = {   impid = "233a1aeb6e4936ee", feed = 2008148184, apikey = "qEIbXubi2bD6DjQBNkyWEGv5fBq2kbCijIxvS3TyZ30dHhlT"  },
         DevonChemPump2 = {   impid = "23560c4cead3dbee", feed = 802343163, apikey = "m1tKlcAgqxPY180HDQe4f82IJWA9LIvFI6dcyuhCvPePYUmb"  },
-        DevonChemTank1 = {   impid = "236f544cead3dbee", feed = 547315046, apikey = "lNbRVoON2zpFe9LmMrBrS86Fni0Zm1W6h6x2ayumNhDYQUav",
-                                    sample_interval = 18, voltage_enable = 1 },
-        DevonChemTank2 = {   impid = "23565aeb6e4936ee", feed = 277137983, apikey = "OjD9OsvgG4NpsBCtoLYt67FLMBmzOnLbXTQFHoFlHu3l0R21",
-                                    sample_interval = 18, voltage_enable = 1 },
-        DevonBrineTank1 = {   impid = "232e1eeb6e4936ee", feed = 1761598148, apikey = "vlylRGnqifM3rpjcmdZRNk6ZC62Akl2j0KTAq7SCG4CQSR3G",
-                                    sample_interval = 18, voltage_enable = 1 },
-        DevonBrineTank2 = {   impid = "232c9feb6e4936ee", feed = 33889245, apikey = "z7ltHrzMtiEfbYJI6hrAPEWQHVzh7VXPMwfnZH0eUizGA2vb",
-                                    sample_interval = 18, voltage_enable = 1 },
+        DevonChemTank1 = {   impid = "232417eb6e4936ee", feed = 547315046, apikey = "lNbRVoON2zpFe9LmMrBrS86Fni0Zm1W6h6x2ayumNhDYQUav",
+                                    sample_interval = 1800, voltage_enable = 1,
+                                    board = "version_021914"},
+        DevonChemTank2 = {   impid = "233f63eb6e4936ee", feed = 277137983, apikey = "OjD9OsvgG4NpsBCtoLYt67FLMBmzOnLbXTQFHoFlHu3l0R21",
+                                    sample_interval = 1800, voltage_enable = 1,
+                                    board = "version_021914"},
+        DevonBrineTank1 = {   impid = "232ace4dead3dbee", feed = 1761598148, apikey = "vlylRGnqifM3rpjcmdZRNk6ZC62Akl2j0KTAq7SCG4CQSR3G",
+                                    sample_interval = 1800, voltage_enable = 1, 
+                                    board = "version_021914"},
+        DevonBrineTank2 = {   impid = "237d8beb6e4936ee", feed = 33889245, apikey = "z7ltHrzMtiEfbYJI6hrAPEWQHVzh7VXPMwfnZH0eUizGA2vb",
+                                    sample_interval = 1800, voltage_enable = 1,
+                                    board = "version_021914"},
 
         WellMarkDemoChemPump = {   impid = "230b96eb6e4936ee", feed = 1266829895, apikey = "MI5vJbWAsfChUMfJc5bzRmAHpx0vcRWesnzuzaR3Wq6SuU0c",
                                         sample_interval = 10, voltage_enable = 1,
@@ -538,6 +542,7 @@ device.on("csv",
 //                server.log("Imp ID: "+agent_myimpid+" Xively Name: "+agent_myxivelyname);
 //                server.log("Xively Feed: "+agent_myfeed+" api Key: "+agent_myapikey);
                 local datetime = date();
+                bootpass = a[ind+1].tofloat(); // remember bootpass
                 if(a[ind+1].tofloat() <= 2.0) // catch second pass
                 {
                     send_sms(TWILIO_TO_NUMBER, format("Starting Up Imp Cold Boot! %02d:%02d - %s", 
@@ -562,7 +567,10 @@ device.on("csv",
             // check for high level alarm
             if(alarm_high.tofloat() < dataForXively.Volts.tofloat())
             {
-                alarm_high_send++;
+//                alarm_high_send++;
+                if(bootpass > 2)
+                {   alarm_high_send++;
+                }
                 if( alarm_high_send == 1) // determine when to send message
                 {
 //                    server.log(format("$$$ Hi Lev %s %s %02d:%02d - WellMark Monitoring Service", 
@@ -574,9 +582,9 @@ device.on("csv",
                     {
                         foreach (ind, val in a)
                         {
-                            server.log(format("$$$ High Lev %s %s %d:%d phone: %s - WellMark Monitoring Services 800-962-0839", 
-                                                    agent_myxivelyname, impDescriptionTable.Site, 
-                                                    (datetime.hour+ZULU_TIME_OFFSET)%24, datetime.min, val));
+//                            server.log(format("$$$ High Lev %s %s %d:%d phone: %s - WellMark Monitoring Services 800-962-0839", 
+//                                                    agent_myxivelyname, impDescriptionTable.Site, 
+//                                                    (datetime.hour+ZULU_TIME_OFFSET)%24, datetime.min, val));
                             send_sms(val, format("High Level %s %s %02d:%02d - WellMark Monitoring Services 800-962-0839", 
                                                     agent_myxivelyname, impDescriptionTable.Site, 
                                                     (datetime.hour+ZULU_TIME_OFFSET)%24, datetime.min));
@@ -596,7 +604,9 @@ device.on("csv",
             // check for low level alarm
             if(alarm_low.tofloat() > dataForXively.Volts.tofloat())
             {
-                alarm_low_send++;
+                if(bootpass > 2)
+                {   alarm_low_send++;
+                }
                 if( alarm_low_send == 1) // determine when to send message
                 {
 //                    server.log(format("$$$ Low Lev %s %s %02d:%02d - WellMark Monitoring Service", 
@@ -607,9 +617,9 @@ device.on("csv",
                     {
                         foreach (ind, val in a)
                         {
-                            server.log(format("$$$ Low Lev %s %s %02d:%02d phone: %s - WellMark Monitoring Services 800-962-0839", 
-                                                    agent_myxivelyname, impDescriptionTable.Site, 
-                                                    (datetime.hour+ZULU_TIME_OFFSET)%24, datetime.min, val));
+//                            server.log(format("$$$ Low Lev %s %s %02d:%02d phone: %s - WellMark Monitoring Services 800-962-0839", 
+//                                                    agent_myxivelyname, impDescriptionTable.Site, 
+//                                                    (datetime.hour+ZULU_TIME_OFFSET)%24, datetime.min, val));
                             send_sms(val, format("Low Level %s %s %02d:%02d - WellMark Monitoring Services 800-962-0839", 
                                                     agent_myxivelyname, impDescriptionTable.Site, 
                                                     (datetime.hour+ZULU_TIME_OFFSET)%24, datetime.min));
