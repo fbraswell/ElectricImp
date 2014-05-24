@@ -344,6 +344,10 @@ function handleSensor()
     {
         // New sensor control on pin 5
         hardware.pin5.write(nv.voltage_enable);
+    } else 
+    {
+        //  Assume New sensor control on pin 5
+        hardware.pin5.write(nv.voltage_enable);
     }
     // enable regulator
 //    hardware.pin8.write(nv.voltage_enable);
@@ -361,6 +365,10 @@ function handleSensor()
     {
         // New sensor control on pin 5
         hardware.pin5.write(0x01 ^ nv.voltage_enable);
+    } else 
+    {
+        //  Assume New sensor control on pin 5
+        hardware.pin5.write(0x01 ^ nv.voltage_enable);
     }
     // disable regulator
 //    hardware.pin8.write(0x01 ^ nv.voltage_enable);
@@ -376,6 +384,7 @@ function handleSensor()
     "Temperature", nv.Temperature,
     "Switch", nv.Switch,
     "Switch1", nv.Switch1
+//    "Board Ver:", nv.board
     ));
 } // function handleSensor()
 
