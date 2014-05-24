@@ -4,11 +4,10 @@
 const TWILIO_ACCOUNT_SID = "AC2125ebaf03194d2f1cf1902b0c4592bb"
 const TWILIO_AUTH_TOKEN = "32f6d0007503cc300765cf6ef9e4e4d0"
 const TWILIO_FROM_NUMBER = "+18017011865" // your phone no goes here
-const TWILIO_TO_NUMBER = "+17657601638" // FMB destination phone no
-//const TWILIO_TO_NUMBER = "+14053975091" // WellMark destination phone no
-// const TWILIO_TO_NUMBER = "+18473402434"  // Crump destination phone no
+const TWILIO_TO_NUMBER = "+14053975091" // Mac destination phone no
+const TWILIO_TO_NUMBER = "+18473402434"  // Crump destination phone no
 // const TWILIO_TO_NUMBER = "+13174320753" // Randy destination phone no
-const ZULU_TIME_OFFSET = 5
+const ZULU_TIME_OFFSET = 19 // Easter Time
 // globalvar <- "230789eb6e4936ee"; // test
 alarm_high <- -1.0; // high level alarm
 alarm_low <- -1.0; // low level alarm
@@ -47,20 +46,21 @@ imp_table <-
         // insert new imps below
         // --This agent is for Chemical Pumps only!
         InformaChemPump1 = {   
-                            impid = "230789eb6e4936ee", 
-//                            impid = "232ace4dead3dbee", 
+//                            impid = "230789eb6e4936ee", 
+                            impid = "232ace4dead3dbee", 
                             feed = 627874217, apikey = "w1buKrbzAknYTWiVGUsIsYY4C0asD1iF5KErllKbXR3VpEMi"  
                            , sample_interval = 30, voltage_enable = 1 },
         // DC Modbus
 //         InformaChemPump2 = {   impid = "234f47eb6e4936ee", feed = 1348944517, apikey = "8aavsrXlDAfIevDIaH9KRNQndh2gcFR0ubABd47dHod0jiqX"  
          InformaChemPump2 = {   impid = "2343b6eb6e4936ee", feed = 1348944517, apikey = "8aavsrXlDAfIevDIaH9KRNQndh2gcFR0ubABd47dHod0jiqX"  
-                           , sample_interval = 5 },
+                           , sample_interval = 30 },
         // AC Modbus
          InformaChemPump3 = {   impid = "23423feb6e4936ee", feed = 1325563619, apikey = "yvIsehmvB1EGt4rAQrKObbDTFdtNIgExhvkXoi5h75R5xRZt"  
                            , sample_interval = 10 },
 //        InformaChemPump1 = {   impid = "233c66eb6e4936ee", feed = 627874217, apikey = "w1buKrbzAknYTWiVGUsIsYY4C0asD1iF5KErllKbXR3VpEMi" 
 //                                 , sample_interval = 5, voltage_enable = 0  },
-        InformaBrineTank1 = {   impid = "232ace4dead3dbee", feed = 1432343757, apikey = "9ehXeWj4AFJ5TD2rKiRInZ664Xv6qiuiGtxciWGLseWIxJ3e"  },
+        InformaBrineTank1 = {   impid = "xx232ace4dead3dbee", feed = 1432343757, apikey = "9ehXeWj4AFJ5TD2rKiRInZ664Xv6qiuiGtxciWGLseWIxJ3e", 
+                                sample_interval = 20, voltage_enable = 1 },
         InformaCrudeTank1 = {   impid = "2307xx", feed = 2033339257, apikey = "fIiRLSNzPa6k4aLm6MahSd3G9NTqwwEsL3UWUql2EGrHKp9o"  },
         InformaChemTank1 = {   impid = "2307xx", feed = 2105788416, apikey = "CbJjQsmbIKKhmvfwNXTXm2geO9lmsROQX3yB1YQKo37F6H1o"  },
         
@@ -72,10 +72,14 @@ imp_table <-
 
         DevonChemPump1 = {   impid = "233a1aeb6e4936ee", feed = 2008148184, apikey = "qEIbXubi2bD6DjQBNkyWEGv5fBq2kbCijIxvS3TyZ30dHhlT"  },
         DevonChemPump2 = {   impid = "23560c4cead3dbee", feed = 802343163, apikey = "m1tKlcAgqxPY180HDQe4f82IJWA9LIvFI6dcyuhCvPePYUmb"  },
-        DevonChemTank1 = {   impid = "2307xx", feed = 547315046, apikey = "lNbRVoON2zpFe9LmMrBrS86Fni0Zm1W6h6x2ayumNhDYQUav"  },
-        DevonChemTank2 = {   impid = "2307xx", feed = 277137983, apikey = "OjD9OsvgG4NpsBCtoLYt67FLMBmzOnLbXTQFHoFlHu3l0R21"  },
-        DevonBrineTank1 = {   impid = "2307xx", feed = 1761598148, apikey = "vlylRGnqifM3rpjcmdZRNk6ZC62Akl2j0KTAq7SCG4CQSR3G"  },
-        DevonBrineTank2 = {   impid = "2307xx", feed = 33889245, apikey = "z7ltHrzMtiEfbYJI6hrAPEWQHVzh7VXPMwfnZH0eUizGA2vb"  },
+        DevonChemTank1 = {   impid = "xx236f544cead3dbee", feed = 547315046, apikey = "lNbRVoON2zpFe9LmMrBrS86Fni0Zm1W6h6x2ayumNhDYQUav",
+                                    sample_interval = 1800, voltage_enable = 1 },
+        DevonChemTank2 = {   impid = "xx23565aeb6e4936ee", feed = 277137983, apikey = "OjD9OsvgG4NpsBCtoLYt67FLMBmzOnLbXTQFHoFlHu3l0R21",
+                                    sample_interval = 1800, voltage_enable = 1 },
+        DevonBrineTank1 = {   impid = "xx232e1eeb6e4936ee", feed = 1761598148, apikey = "vlylRGnqifM3rpjcmdZRNk6ZC62Akl2j0KTAq7SCG4CQSR3G",
+                                    sample_interval = 1800, voltage_enable = 1 },
+        DevonBrineTank2 = {   impid = "xx232c9feb6e4936ee", feed = 33889245, apikey = "z7ltHrzMtiEfbYJI6hrAPEWQHVzh7VXPMwfnZH0eUizGA2vb",
+                                    sample_interval = 1800, voltage_enable = 1 },
 
         WellMarkDemoChemPump = {   impid = "2307xx", feed = 1266829895, apikey = "MI5vJbWAsfChUMfJc5bzRmAHpx0vcRWesnzuzaR3Wq6SuU0c"  },
         WellMarkDemoLevel = {   impid = "2307xx", feed = 2012325919, apikey = "suAoU5udCBqBOD9BmM3RGTuCyVf6STHHHmOcssfEjPhL1tPV"  },
@@ -84,7 +88,7 @@ imp_table <-
         EOGChemPump1 = {   impid = "237c523643fc42ee", feed = 2099714343, apikey = "mRJx9jKahQDHdIVDjd1GaISZOM4pc3XlV5QBPFUgQk7avbjE"  
                            , sample_interval = 10},
         EOGChemTank1 = {   impid = "xx237c523643fc42ee", feed = 2099714343, apikey = "mRJx9jKahQDHdIVDjd1GaISZOM4pc3XlV5QBPFUgQk7avbjE"  
-                           , sample_interval = 10}
+                           , sample_interval = 1800}
     }; // end imp_table
 
 agent_myimpid <- 0; // Imp ID
@@ -405,8 +409,8 @@ device.on("csv",
                 local datetime = date();
                 if(a[ind+1].tofloat() <= 2.0) // catch second pass
                 {
-                    send_sms(TWILIO_TO_NUMBER, format("Starting Up Imp Cold Boot! %d:%d - %s", 
-                                                    datetime.hour-5, datetime.min, 
+                    send_sms(TWILIO_TO_NUMBER, format("Starting Up Imp Cold Boot! %02d:%02d - %s", 
+                                                    (datetime.hour+ZULU_TIME_OFFSET)%24, datetime.min, 
                                                     agent_myxivelyname));
                     // "13.5 ft Hi Level Alarm Brine Tank 1 (or 2). Devon Reed No.  1-21H WellMark Monitoring Services
                     // Hi Lev DevinBrineTank1 Reed No. 1-21H WellMark Monitoring Service
@@ -430,21 +434,21 @@ device.on("csv",
                 alarm_high_send++;
                 if( alarm_high_send == 1) // determine when to send message
                 {
-                    server.log(format("$$$ Hi Lev %s %s %d:%d - WellMark Monitoring Service", 
+                    server.log(format("$$$ Hi Lev %s %s %02d:%02d - WellMark Monitoring Services 800-962-0839", 
                                     agent_myxivelyname, impDescriptionTable.Site, 
-                                    datetime.hour-5, datetime.min));
+                                    (datetime.hour+ZULU_TIME_OFFSET)%24, datetime.min));
 //                send_sms(TWILIO_TO_NUMBER, format("Hi Lev %s Reed No. 1-21H %d:%d - WellMark Monitoring Service", agent_myxivelyname, datetime.hour-5, datetime.min));
                     local a = split( alarm_high_phones, "[ ]\",\n");
                     if(a.len()) // if len is 0 - no phone list
                     {
                         foreach (ind, val in a)
                         {
-                            server.log(format("$$$ High Lev %s %s %d:%d phone: %s - WellMark Monitoring Service", 
+                            server.log(format("$$$ High Lev %s %s %d:%d phone: %s - WellMark Monitoring Services 800-962-0839", 
                                                     agent_myxivelyname, impDescriptionTable.Site, 
-                                                    datetime.hour-5, datetime.min, val));
-                            send_sms(val, format("High Level %s %s %d:%d - WellMark Monitoring Service", 
+                                                    (datetime.hour+ZULU_TIME_OFFSET)%24, datetime.min, val));
+                            send_sms(val, format("High Level %s %s %02d:%02d - WellMark Monitoring Services 800-962-0839", 
                                                     agent_myxivelyname, impDescriptionTable.Site, 
-                                                    datetime.hour-5, datetime.min));
+                                                    (datetime.hour+ZULU_TIME_OFFSET)%24, datetime.min));
 //                          server.log(format("### High alarm split: ind: %d val: %s", ind, val));
                         }
 //                    server.log(format("--The response code: %d and split low alarm phones: ", response.statuscode)+ a[0]);
@@ -464,20 +468,20 @@ device.on("csv",
                 alarm_low_send++;
                 if( alarm_low_send == 1) // determine when to send message
                 {
-                    server.log(format("$$$ Low Lev %s %s %d:%d - WellMark Monitoring Service", 
+                    server.log(format("$$$ Low Lev %s %s %02d:%02d - WellMark Monitoring Services 800-962-0839", 
                                     agent_myxivelyname, impDescriptionTable.Site, 
-                                    datetime.hour-5, datetime.min));
+                                    (datetime.hour+ZULU_TIME_OFFSET)%24, datetime.min));
                     local a = split( alarm_low_phones, "[ ]\",\n");
                     if(a.len()) // if len is 0 - no phone list
                     {
                         foreach (ind, val in a)
                         {
-                            server.log(format("$$$ Low Lev %s %s %d:%d phone: %s - WellMark Monitoring Service", 
+                            server.log(format("$$$ Low Lev %s %s %02d:%02d phone: %s - WellMark Monitoring Services 800-962-0839", 
                                                     agent_myxivelyname, impDescriptionTable.Site, 
-                                                    datetime.hour-5, datetime.min, val));
-                            send_sms(val, format("Low Level %s %s %d:%d - WellMark Monitoring Service", 
+                                                    (datetime.hour+ZULU_TIME_OFFSET)%24, datetime.min, val));
+                            send_sms(val, format("Low Level %s %s %02d:%02d - WellMark Monitoring Services 800-962-0839", 
                                                     agent_myxivelyname, impDescriptionTable.Site, 
-                                                    datetime.hour-5, datetime.min));
+                                                    (datetime.hour+ZULU_TIME_OFFSET)%24, datetime.min));
 //                          server.log(format("### low alarm split: ind: %d val: %s", ind, val));
                         }
 //                    server.log(format("--The response code: %d and split low alarm phones: ", response.statuscode)+ a[0]);
