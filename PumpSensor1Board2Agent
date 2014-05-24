@@ -5,9 +5,8 @@ const TWILIO_ACCOUNT_SID = "AC2125ebaf03194d2f1cf1902b0c4592bb"
 const TWILIO_AUTH_TOKEN = "32f6d0007503cc300765cf6ef9e4e4d0"
 const TWILIO_FROM_NUMBER = "+18017011865" // your phone no goes here
     // This phone number gets all the boot up text messages
-const TWILIO_TO_NUMBER = "+17657601638" // FMB destination phone no
-// const TWILIO_TO_NUMBER = "+14055356726" // WellMark destination phone no
-// const TWILIO_TO_NUMBER = "+18473402434"  // Crump destination phone no
+const TWILIO_TO_NUMBER = "+14055356726" // Mac destination phone no
+const TWILIO_TO_NUMBER = "+18473402434"  // Crump destination phone no
 // const TWILIO_TO_NUMBER = "+13174320753" // Randy destination phone no
 const ZULU_TIME_OFFSET = 19 // Eastern Time
 // globalvar <- "230789eb6e4936ee"; // test
