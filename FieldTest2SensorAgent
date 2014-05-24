@@ -4,8 +4,8 @@
 const TWILIO_ACCOUNT_SID = "AC2125ebaf03194d2f1cf1902b0c4592bb"
 const TWILIO_AUTH_TOKEN = "32f6d0007503cc300765cf6ef9e4e4d0"
 const TWILIO_FROM_NUMBER = "+18017011865" // your phone no goes here
-const TWILIO_TO_NUMBER = "+14053975091" // FMB destination phone no
-// const TWILIO_TO_NUMBER = "+18473402434"  // Crump destination phone no
+const TWILIO_TO_NUMBER = "+14055356726" // Mac destination phone no
+const TWILIO_TO_NUMBER = "+18473402434"  // Crump destination phone no
 // const TWILIO_TO_NUMBER = "+13174320753" // Randy destination phone no
 
 function send_sms(number, message) {
@@ -33,13 +33,13 @@ device.on("sendSMS", function(options) {
     server.log("smstimer");
     server.log(smstimer);
     if (smstimer == 0 && options.highlevelalarm) {
-        send_sms(TWILIO_TO_NUMBER, format("High Level Alarm on Production Water Tank 91 Reese Lease %d:%d - Wellmark Monitoring Services", datetime.hour-5, datetime.min));
+        send_sms(TWILIO_TO_NUMBER, format("High Level Alarm on Production Water Tank 91 Reese Lease %d:%d - Wellmark Monitoring Services 800-962-0839", datetime.hour-5, datetime.min));
     }
     else if (smstimer == 3*6) {
-        send_sms(TWILIO_TO_NUMBER, format("Days to Overfill: 30 on Crude Oil Tank 83 Reese Lease %d:%d - Wellmark Monitoring Services", datetime.hour-5, datetime.min));
+        send_sms(TWILIO_TO_NUMBER, format("Days to Overfill: 30 on Crude Oil Tank 83 Reese Lease %d:%d - Wellmark Monitoring Services 800-962-0839", datetime.hour-5, datetime.min));
     }
     else if (smstimer == 6*6) {
-        send_sms(TWILIO_TO_NUMBER, format("Days to Empty: 1 on Well 22 Chem Tank Reese Lease %d:%d - Wellmark Monitoring Services", datetime.hour-5, datetime.min));
+        send_sms(TWILIO_TO_NUMBER, format("Days to Empty: 1 on Well 22 Chem Tank Reese Lease %d:%d - Wellmark Monitoring Services 800-962-0839", datetime.hour-5, datetime.min));
     }
     smstimer += 1;
     if (smstimer > 9*6) {
@@ -91,7 +91,7 @@ imp_table <-
                                 , sample_interval = 10, voltage_enable = 0  },
         WellMarkDemoSwitch = {   impid = "2307xx", feed = 848109198, apikey = "CLT3ehpzXv1RAwYQDsSzE8HmXQLcjspRBPcc3YQDgbwSKahT"  },
         EOGChemTank1 = {   impid = "23703eeb6e4936ee", feed = 2110242284, apikey = "KNZTnE2wx5JwFzQ3WTj4PhKhGeU2P4bY4Gp2qFmoJiye3kWD"  
-                                , sample_interval = 1800  },
+                                , sample_interval = 7200  },
 
         x232ace4dead3dbee =
         {   impid = "xx232ace4dead3dbee",
@@ -194,4 +194,3 @@ device.on("csv", function(csv) {
 
 
 });
-
