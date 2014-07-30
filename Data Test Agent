@@ -4,7 +4,8 @@ const XIVELY_URL = "https://api.xively.com/v2/feeds/";  // Xively base URL
 const XIVELY_Account_Authorization = "Basic a25pZ2h0aGF3azprbmlnM3QzOHdr"; // WellMark knighthawk auth
 // myDevID <- "no Imp dev id yet";
 IMP_DEV_ID <- "no Imp dev id yet";
-XIVELY_FEED <- 0;   // Xively feed will go here
+XIVELY_FEED <- 0;   // Xively feed # will go here
+XIVELY_FEED_NAME <- "xively feed name"; // Xively Feed Name
 XIVELY_API_ENDPOINT <- "no Xively endpoint yet";
 // agent_myapikey <- "no Xively feed key yet";
 XIVELY_API_KEY <- "no Xively feed key yet";
@@ -77,9 +78,14 @@ function dataToXively(csv)
 //                        "Content-Length": body.len()
                         };
   local request = http.put(XIVELY_API_ENDPOINT, extraHeaders, body);
-  server.log("API ENDPOINT: "+XIVELY_API_ENDPOINT+
-                " myapikey: "+XIVELY_API_KEY+
+//  server.log("API ENDPOINT: "+XIVELY_API_ENDPOINT+
+//                " myapikey: "+XIVELY_API_KEY+
+//                " length of package: "+body.len());
+                
+    server.log("Xively Feed: "+XIVELY_FEED_NAME+
+                " ImpID: "+IMP_DEV_ID+
                 " length of package: "+body.len());
+                
 //  server.log("put request: "+request+" extra headers: "+extraHeaders);
   request.sendasync(dataToXivelyResponse);
 //   local response = request.sendsync();
@@ -90,6 +96,11 @@ function dataToXively(csv)
 // incoming response's message and status code
 function dataToXivelyResponse(response) 
 {
+    if (response.statuscode == 200)
+    {
+        return;
+    }
+        // print message if status code is not 200
     server.log("Status Code Put dataToXively CSV: " + response.statuscode + 
                 ", Message: " + (response.body==""?"none":response.body));
 }   // function dataToXivelyResponse(response) 
@@ -190,13 +201,15 @@ function getXivelyFeedsTableResponse(response)
     server.log("Imp-Xively Table Info: Imp ID: "+xivelyInfo[0]+" Feed Name: "+xivelyInfo[1]+
                 " Feed ID: "+xivelyInfo[2]+" API key: "+xivelyInfo[3]);
         
+    IMP_DEV_ID  = xivelyInfo[0];
+    XIVELY_FEED_NAME = xivelyInfo[1];
+    
     XIVELY_FEED = xivelyInfo[2];
 //    const XIVELY_URL = "https://api.xively.com/v2/feeds/";
 //    XIVELY_API_ENDPOINT = format("https://api.xively.com/v2/feeds/%s.csv", XIVELY_FEED);
 //    XIVELY_API_ENDPOINT = format("https://api.xively.com/v2/feeds/%s", XIVELY_FEED);
         // strip gets rid of whitespace at the beginning and end of the string - needed 
         // to get rid of new line
-        
     XIVELY_API_KEY = strip(xivelyInfo[3]);
     
         // diagnostic dump
