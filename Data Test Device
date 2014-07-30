@@ -4,22 +4,27 @@
 // When the Imp comes out of deep sleep, it starts here
 // log an ADC value each 10 sec, only tell the server each minute 
 t <- time();
-myrssi <- imp.rssi();
+// myrssi <- imp.rssi();
 const REGULATOR_ON = 0x01;
 const REGULATOR_OFF = 0x00;
-const XMIT_PERIOD = 60; // Time between transmissions
-const SAMPLE_PERIOD = 10; // Time between samples
+const XMIT_PERIOD = 30; // Time between transmissions
+const SAMPLE_PERIOD = 15; // Time between samples
 
-function dispatch()
-{
-    
-    logdata();
-    
-    
-        // Sync to the sample period
-    imp.onidle(function() { imp.deepsleepfor(SAMPLE_PERIOD - (time() % SAMPLE_PERIOD)); });
-    
-}
+// constant strings
+
+const TABLEDATA = "tabledata";
+const BOOTCOUNT = "bootcount";
+const TIME = "time";
+const SWITCH1 = "switch1";
+const SWITCH2 = "switch2";
+const VBAT = "vbat";
+const RSSI = "rssi";
+const MEMORY = "memory";
+
+
+const METADATA = "metadata";
+const SSID = "ssid";
+const DEVID = "devid";
 
 // Send data to the agent
 function transmitData() 
@@ -51,7 +56,8 @@ function transmitData()
     nv.sensor["time"] <- t;
     if(nv.bootcount > 1) // don't send with first xmits
     {
-        nv.sensor["rssi"] <- imp.rssi();
+//        nv.sensor["rssi"] <- myrssi;
+//        nv.sensor["rssi"] <- imp.rssi();
         nv.sensor["switch1"] <- sw1;
         nv.sensor["switch2"] <- sw2;
         
@@ -60,7 +66,7 @@ function transmitData()
         // Static information about Imp
     
     // add this as metadata later
-//    server.log( format("network: %s; deviceID: %s", imp.getssid(), hardware.getdeviceid()) );
+//    server.log( format("network: %s; deviceID: %s; rssi: %d", imp.getssid(), hardware.getdeviceid(), imp.rssi() ) );
 /*
     foreach (key, val in nv.sensor)
     {
@@ -78,9 +84,16 @@ function transmitData()
     }
     
     agent.send("tabledata", nv.sensor);
-    nv.sensor = {};
-    nv.time = t;
-    server.expectonlinein(XMIT_PERIOD);
+//    nv.sensor = {};
+    nv.sensor.clear();
+        // rssi must be sampled while the WiFi is turned on
+        // most of the time the WiFi is off, except here, where data has 
+        // just been transmitted.
+    nv.sensor["rssi"] <- imp.rssi();
+    nv.sensor["memory"] <- imp.getmemoryfree();
+//    server.log( format("network: %s; deviceID: %s; rssi: %d", imp.getssid(), hardware.getdeviceid(), imp.rssi() ) );
+//    nv.time = t;
+//    server.expectonlinein(XMIT_PERIOD);
 }   // function transmitData() 
 
 // log data in between transmit times
@@ -101,19 +114,40 @@ function logdata()
     local analogval = hardware.pin8.read(); // 0 - 65535 
     local tempC = ((analogval * 0.00005035)-0.5)*100.0;                                                                                                           
     local tempF = (9.0/5.0)*tempC + 32.0;
-    nv.data += format("temp1-%d, %f\n", t-nv.time, tempF);
+//    nv.data += format("temp1-%d, %f\n", t-nv.time, tempF);
     nv.sensor["temp"] <- tempF;
     
   hardware.pin5.write(REGULATOR_OFF); // turn off regulator
 
+/*
   if (sec <= 9) 
   {
       transmitData();
   }
   imp.onidle(function() { imp.deepsleepfor(10 - (time() % 10)); });
+*/
 
 //    imp.deepsleepfor(SAMPLE_PERIOD); 
 }   // function logdata() 
+
+// dispatch logdata() and transmitdata() if time for xmit
+function dispatch()
+{
+    
+    logdata();  // sample data first
+        // check to see if time to xmit
+    if (t >= (nv.time + XMIT_PERIOD))
+    {
+//        server.log("nv.time = "+nv.time+" time t = "+t);
+        nv.time = t; // save xmit time
+            // tell agent when to expect next transmission
+        server.expectonlinein(XMIT_PERIOD);
+        transmitData(); // transmit the data to agent
+    }
+//    logdata();  // sample data
+        // Sync to the sample period - sleep for one sample period
+    imp.onidle(function() { imp.deepsleepfor(SAMPLE_PERIOD - (time() % SAMPLE_PERIOD)); });
+}   // function dispatch()
 
 // Hardware set-up
 function hardwareSetUp()
@@ -140,17 +174,19 @@ function hardwareSetUp()
 // if just turned on, and nv doesn't exist
 if (!("nv" in getroottable())) 
 {
-    hardwareSetUp(); // set up the hardware pins
-    nv <- { data = "",  // data string accumulates data with each sample period
+//    hardwareSetUp(); // set up the hardware pins
+    nv <- {     // data = "",  // data string accumulates data with each sample period
             sensor = {}, // table for sensor data
             meta = {},  // meta data about this device
-            time = 0,  // time stores the time at beginning of each transmission
+            time = t,  // time stores the time at beginning of each transmission
             bootcount = 0 // bootcount is incremented on each wakeup
         };
-//    transmitData();
-    logdata();
+    transmitData();
+//    logdata();
 }
 
+hardwareSetUp();
+dispatch(); // log and transmit
 // imp.onidle(logdata);
-logdata();
+//logdata();
 // server.log("---DEVICE CODE END---");
