@@ -34,7 +34,7 @@ device.on("tabledata",function(data)
         local makecsv = ""; // used to build csv file for Xively
         foreach (key, val in data)
         {
-            if(key.len() > 9) // time stamp string is longer than the other keys
+            if(key.len() > 9 && (key.find("MB") == null)) // time stamp string is longer than the other keys
             {
                     // build time string
                 local v = key.tointeger() - data["time"];
