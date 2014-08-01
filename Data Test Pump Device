@@ -5,7 +5,21 @@
 // log an ADC value each 10 sec, only tell the server each minute 
 t <- time();
 
-const PUMP = 0; // Pump controller?
+const PUMP = 1; // Pump controller?
+const MBwrite = 1;
+const MBread = 0; 
+
+const MB_ONTIME = "MB_OnTime";
+const MB_OFFTIME = "MB_OffTime";
+const MB_TEMPSETPOINT = "MB_TempSetPoint";
+const MB_QUARTSPERDAY = "MB_QuartsPerDay";
+const MB_CYCLES = "MB_Cycles";
+const MB_TEMPERATURE = "MB_Temperature";
+const MB_PLUNGERSIZE = "MB_PlungerSize";
+const MB_PINPOSITION = "MB_PinPosition";
+const MB_MOTORSIZE = "MB_MotorSize";
+const MB_BATTERYVOLTAGE = "MB_BatteryVoltage";
+const MB_VERSIONNUMBER = "MB_VersionNumber";
 
 const REGULATOR_ON = 0x01;
 const REGULATOR_OFF = 0x00;
@@ -85,29 +99,34 @@ function requestRegisterInfo()
 //local crc = calculateCRC([ 0x10, 0x03, 0x00, 0x00
 
 
-function handleModbus() {
+// function handleModbus() 
+function logMB() 
+{
 //    local d = date(); 
     
-    server.log("Reading values from MODBUS registers");
-    hardware.pin2.write(1);
-    requestRegisterInfo();
-    imp.sleep(10.0/1000.0);
-    hardware.pin2.write(0);
-    imp.sleep(10.0/1000.0);
+//    server.log("Reading values from MODBUS registers");
+    hardware.pin2.write(1); // MB write
+    requestRegisterInfo();  // send MB read registers command string
+    imp.sleep(10.0/1000.0); // wait for response
+    hardware.pin2.write(0); // MB read
+    imp.sleep(10.0/1000.0); // wait for response
     
-    agent.send("impid", {ImpID = format("%s",hardware.getimpeeid())});
+ //   agent.send("impid", {ImpID = format("%s",hardware.getimpeeid())});
     
     local byte = -1;
     // The a stands for all bytes but I didn't want to type it out so many times.
     local a = [];
-    while ((byte = hardware.uart1289.read()) != -1) {
-        a.append(byte);
-        imp.sleep(100.0/1000.0);
+        // Read MB register data from UART
+    while ((byte = hardware.uart1289.read()) != -1) 
+    {
+        a.append(byte); // add byte to end of array
+        imp.sleep(100.0/1000.0);    // wait for next byte
     }
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
-    local csvPayload = "";
-    if (a.len() > 0) {
+//    local csvPayload = "";
+    if (a.len() > 0) 
+    {   // MB Data available in the array
         local onTime = (a[3] << 8) | a[4];
         local offTime = (a[5] << 8) | a[6]; 
         
@@ -120,6 +139,26 @@ function handleModbus() {
         qpd.seek(0, 'b');
         local quartsPerDay = qpd.readn('f');
         
+
+        nv.sensor[MB_QUARTSPERDAY] <- quartsPerDay;
+        nv.sensor[MB_CYCLES] <- (a[13] << 24) | (a[14] << 16) | (a[15] << 8) | a[16];
+        nv.sensor[MB_TEMPERATURE] <- (a[17] << 8) | a[18];
+        nv.sensor[MB_BATTERYVOLTAGE] <- casti2f((a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28]); // not working
+        
+        // These values rarely change, if ever
+        // only report them at start-up time
+        if(nv.bootcount == 0)
+        {
+            nv.sensor[MB_VERSIONNUMBER] <- (a[29] << 24) | (a[30] << 16) | (a[31] << 8) | a[32];
+            nv.sensor[MB_ONTIME] <- onTime;
+            nv.sensor[MB_OFFTIME] <- offTime;
+            nv.sensor[MB_TEMPSETPOINT] <- (a[7] << 8) | a[8];
+            nv.sensor[MB_PLUNGERSIZE] <- (a[19] << 8) | a[20];
+            nv.sensor[MB_PINPOSITION] <- (a[21] << 8) | a[22];
+            nv.sensor[MB_MOTORSIZE] <- (a[23] << 8) | a[24]
+        }
+        
+/*        
         csvPayload = format("%s,%d\n%s,%d\n%s,%.2f\n%s,%.2f\n%s,%d\n%s,%d\n%s,%d\n%s,%d\n%s,%d\n%s,%.2f\n%s,%d\n%s,%.4f", // \n%s,%.2f\n%s,%.2f"   // \n%s,%d\n%s,%.2f", // \n%s,%d",
             "MB_OnTime", onTime,
             "MB_OffTime", offTime,
@@ -135,9 +174,9 @@ function handleModbus() {
             "Volts", (hardware.voltage()/4096.0) * (hardware.pin7.read()/16.0)
         );
         agent.send("csv", csvPayload);
-
+*/
     } else 
-    {
+    {   // no data in MB array
         server.log("Can't read MODBUS registers!");
     }
 } // function handleModbus() 
@@ -234,11 +273,54 @@ function logdata()
   hardware.pin5.write(REGULATOR_OFF); // turn off regulator
 }   // function logdata() 
 
+// log data in between transmit times
+function logpressure() 
+{
+//  local min = (t/60) % 60;
+  local sec = t % 60;
+  
+  hardware.pin5.write(REGULATOR_ON); // turn on regulator
+        // While waiting for regulator, read switches
+//    nv.sensor[SWITCH1] <- hardware.pin1.read();
+//    nv.sensor[SWITCH2] <- hardware.pin2.read();
+    // also read battery voltage on pin 9
+//    local adval = hardware.pin9.read(); // 0 - 65535
+//    local volts = (hardware.voltage()/4096.0) * (adval/16.0); 
+    // R1 = 357k and R2 = 96.7k (actual measurements)
+    // Vbat = V (R1 + R2)/R2    // from the voltage divider
+    // need to measure resistors for accuracy
+    //   local vbat = volts * (323.6 + 100.0)/100.0;
+    // measured ratio of 4.59
+//    local vbat = volts * 4.59;
+//    nv.sensor[VBAT] <- vbat;
+  imp.sleep(0.25); // Wait for regulator voltage to come up
+    // Get sensor voltage
+  local volts = (hardware.voltage()/4096.0) * (hardware.pin7.read()/16.0); // calc pressure here 
+//  nv.data = nv.data + format("pvolts-%d, %.3f\n", t-nv.time, volts);
+  nv.sensor[t] <- volts;
+  
+    // Get temperature data from pin 8
+//    local analogval = hardware.pin8.read(); // 0 - 65535 
+//    local tempC = ((analogval * 0.00005035)-0.5)*100.0;                                                                                                           
+//    local tempF = (9.0/5.0)*tempC + 32.0;
+//    nv.data += format("temp1-%d, %f\n", t-nv.time, tempF);
+//    nv.sensor[TEMP] <- tempF;
+    
+  hardware.pin5.write(REGULATOR_OFF); // turn off regulator
+}   // function logpressure() 
+
 // dispatch logdata() and transmitdata() if time for xmit
 function dispatch()
 {
     
-    logdata();  // sample data first
+    if(PUMP)
+    {
+        logMB(); // sample MB registers
+        logpressure();
+    } else
+    {
+        logdata();  // sample analog data first
+    }
         // check to see if time to xmit
     if (t >= (nv.time + XMIT_PERIOD))
     {
@@ -305,6 +387,7 @@ if (!("nv" in getroottable()))
 //    hardwareSetUp(); // set up the hardware pins
     nv <- {     // data = "",  // data string accumulates data with each sample period
             sensor = {}, // table for sensor data
+            MB = {},    // table for MB register
             meta = {},  // meta data about this device
             time = t,  // time stores the time at beginning of each transmission
             bootcount = 0 // bootcount is incremented on each wakeup
