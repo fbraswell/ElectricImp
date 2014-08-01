@@ -219,5 +219,45 @@ function getXivelyFeedsTableResponse(response)
     }
 */
 }   // function getXivelyFeedsTableResponse(response) 
+
+function requestHandler(request, response)
+{
+    server.log("++++++++++++++received request++++++++++++++++");
+    // Check if the variable led was passed into the query
+  if ("cmd1" in request.query) 
+  {
+    // if it was, send the value of it to the device
+    device.send("cmd1 found: ", request.query["cmd1"]);
+  }
+    server.log("cmd1: "+request.query.cmd1);
+    server.log("cmd2: "+request.query["cmd2"]);
+    server.log("body of message: "+request.body);
+    
+    try
+    {
+        local data = http.jsondecode(request.body);
+        server.log("json decode of body: "+data);
+    } catch (e) 
+    {
+        // send a response indicating invalid JSON
+        server.log("!!!!--Ivalid JSON string");
+        // response.send(500, "Invalid JSON string");
+    }
+    
+    foreach(key,val in request)
+    {
+        server.log("---request: "+key+": val: "+val);
+    }
+    foreach(key,val in request.query)
+    {
+        server.log("---request.query: "+key+": val: "+val);
+    }
+    // send a response back to whoever made the request
+    response.send(200, "OK");
+}
+
+    // set up the http request handler
+http.onrequest(requestHandler);
+
 server.log("---AGENT CODE END---");
     
