@@ -220,6 +220,7 @@ function getXivelyFeedsTableResponse(response)
 */
 }   // function getXivelyFeedsTableResponse(response) 
 
+// handle a trigger from Xively
 function requestHandler(request, response)
 {
     server.log("++++++++++++++received request++++++++++++++++");
@@ -227,23 +228,73 @@ function requestHandler(request, response)
   if ("cmd1" in request.query) 
   {
     // if it was, send the value of it to the device
-    device.send("cmd1 found: ", request.query["cmd1"]);
-  }
-    server.log("cmd1: "+request.query.cmd1);
-    server.log("cmd2: "+request.query["cmd2"]);
-    server.log("body of message: "+request.body);
+    // device.send("cmd1 found: ", request.query["cmd1"]);
+    local num = 9;
+    local data;
+        // decode the url
+    data = http.urldecode(request.body);
+    local datajson;
+        // now decode json to make an object
+    datajson = http.jsondecode(data.body);
+        // get the value of the new setting from the object
+    num = datajson.triggering_datastream.value.value;
+    
+        // in order to use device.send, the device must not
+        // be asleep. If asleep, it never receives the send.
+        // To make sure device is awake, use the device.onconnect
+        // method to send the device.send request
+    device.onconnect(function() 
+    {
+        device.send("newsetpoint", num);
+        server.log("######## Device connected to agent");
+    });
+
+        // Since device.onconnect stays active and executes with
+        // each connect, it is necessary to reset it at disconnect time.
+        // At disconnect time, turn off the device.onconnect procedure
+        // so the device.send(newsetpoint, num) doesn't keep running
+    device.ondisconnect(function()
+    {
+        device.onconnect(function(){});
+    });
+
+    server.log("cmd1 found in request.query: "+request.query.cmd1);
+  } // if ("cmd1" in request.query) 
+  
+//    server.log("cmd1: "+request.query.cmd1);
+//    server.log("cmd2: "+request.query["cmd2"]);
+//    server.log("body of message: "+request.body);
     
     try
     {
-        local data = http.jsondecode(request.body);
+        local data;
+        data = http.urldecode(request.body);
+        server.log("urldecode of body: "+data);
+        local datajson;
+        datajson = http.jsondecode(data.body);
+        foreach(key, val in datajson)
+        {
+//            server.log("==url data.body key: "+key);
+            server.log("==json decode of data.body key: "+key+" val: "+val);
+        }
+        
+        server.log("datajson id: "+datajson.id);
+        server.log("datajson timestamp: "+datajson.timestamp);
+        server.log("datajson.triggering_datastream.id: "+datajson.triggering_datastream.id);
+        server.log("datajson.triggering_datastream.value.value: "+datajson.triggering_datastream.value.value);
+/*
+        data = http.base64decode(request.body);
+        server.log("base 64 decode of body: "+data);
+        data = http.jsondecode(request.body);
         server.log("json decode of body: "+data);
+*/
     } catch (e) 
     {
         // send a response indicating invalid JSON
-        server.log("!!!!--Ivalid JSON string");
+        server.log("!!!!--Ivalid decode string");
         // response.send(500, "Invalid JSON string");
     }
-    
+/*    
     foreach(key,val in request)
     {
         server.log("---request: "+key+": val: "+val);
@@ -252,9 +303,10 @@ function requestHandler(request, response)
     {
         server.log("---request.query: "+key+": val: "+val);
     }
+*/
     // send a response back to whoever made the request
     response.send(200, "OK");
-}
+}   // function requestHandler(request, response)
 
     // set up the http request handler
 http.onrequest(requestHandler);
