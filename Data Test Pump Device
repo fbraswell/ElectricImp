@@ -5,7 +5,6 @@
 // log an ADC value each 10 sec, only tell the server each minute 
 t <- time();
 
-const PUMP = 1; // Pump controller?
 const MBwrite = 1;
 const MBread = 0; 
 
@@ -23,8 +22,13 @@ const MB_VERSIONNUMBER = "MB_VersionNumber";
 
 const REGULATOR_ON = 0x01;
 const REGULATOR_OFF = 0x00;
-const XMIT_PERIOD = 60; // Time between transmissions
-const SAMPLE_PERIOD = 10; // Time between samples
+
+const PUMP_MODE = 1;
+const TRANSDUCER_MODE = 0; 
+
+// const PUMP = 1; // Pump controller Module?
+// const XMIT_PERIOD = 60; // Time between transmissions
+// const SAMPLE_PERIOD = 10; // Time between samples
 
 // constant strings
 // Making these strings constants helps
@@ -41,12 +45,9 @@ const RSSI = "rssi";
 const MEMORY = "memory";
 const TEMP = "temp";
 
-
 const METADATA = "metadata";
 const SSID = "ssid";
 const DEVID = "devid";
-
-
 
 // UART Communication example for the Modbus communication
 // Transfer data from Imp uart, pins 1 CTS (not used by us), 2 RTS, 8 Tx, 9 Rx
@@ -54,28 +55,37 @@ const DEVID = "devid";
 // The board uses the RTS signal to control the direction of the data on 
 // the RS-485 wires
 
-/*
-function readSerial() 
+// Send back Imp information
+agent.on("getImpInfo", function(nouse)
 {
-    local result = hardware.uart1289.read();
-    if (result == -1) {
-        server.show("No data returned.");
-    } else {
-        server.show(format("%x", result));
-    }
-}
+        // Respond back with nv.meta which
+        // contains the ImpID and Network Name
+        // This request only comes if the device is running
+        // but the agent has been reset
+    server.log("Send back metadata");
+    agent.send(METADATA, nv.meta);
+});
 
-function writeRegisterRequest()
+agent.on("impControlVariables", function(vars)
 {
-    hardware.uart1289.write(0xxx);
-}
-*/
+    // Get the variables for sample period, xmit period and Imp mode
+    
+    nv.PUMP = vars.IMP_MODE.tointeger(); // Pump controller Module?
+    nv.XMIT_PERIOD = vars.IMP_XMIT_PER.tofloat(); // Time between transmissions
+    nv.SAMPLE_PERIOD = vars.IMP_SAMPLE_PER.tofloat(); // Time between samples
+    
+    foreach(key, val in vars)
+    {
+        server.log("^^control var key: "+key+" val: "+val);
+    }
+    
+});
 
 // Receive a new quarts per day setpoint from agent
 agent.on("newsetpoint", function(newsetpoint) 
 {
     server.log("^^^^^^^^^^^^^Setting QuartsPerDay to: " + newsetpoint);
-    writeQuartsPerDay(newsetpoint);
+    writeQuartsPerDay(newsetpoint); 
 });
 
 function setMotorState(state) 
@@ -358,20 +368,22 @@ function logpressure()
   hardware.pin5.write(REGULATOR_OFF); // turn off regulator
 }   // function logpressure() 
 
+
 // dispatch logdata() and transmitdata() if time for xmit
 function dispatch()
 {
-    
-    if(PUMP)
+// const PUMP_MODE = 1;
+// const TRANSDUCER_MODE = 0;     
+    if(nv.PUMP == PUMP_MODE)
     {
         logMB(); // sample MB registers
-        logpressure();
+        logpressure(); 
     } else
     {
         logdata();  // sample analog data first
     }
         // check to see if time to xmit
-    if (t >= (nv.time + XMIT_PERIOD))
+    if (t >= (nv.time + nv.XMIT_PERIOD))
     {
         // increment bootcount with each xmit
 //        nv.sensor[BOOTCOUNT] <- nv.bootcount++;
@@ -382,18 +394,20 @@ function dispatch()
             // only send at startup
 //        getImpInfo();
             // tell agent when to expect next transmission
-        server.expectonlinein(XMIT_PERIOD);
+        server.expectonlinein(nv.XMIT_PERIOD);
         transmitData(); // transmit the data to agent
     }
 //    logdata();  // sample data
         // Sync to the sample period - sleep for one sample period
-    imp.onidle(function() { imp.deepsleepfor(SAMPLE_PERIOD - (time() % SAMPLE_PERIOD)); });
+    imp.onidle(function() { imp.deepsleepfor(nv.SAMPLE_PERIOD - (time() % nv.SAMPLE_PERIOD)); });
 }   // function dispatch()
 
 // Hardware set-up
 function hardwareSetUp()
 {
-    if(PUMP)
+// const PUMP_MODE = 1;
+// const TRANSDUCER_MODE = 0; 
+    if(nv.PUMP == PUMP_MODE)
     {
 //        server.log("--Hardware ModBus");
             // UART connection to RS-485 channel
@@ -439,7 +453,12 @@ if (!("nv" in getroottable()))
             MB = {},    // table for MB register
             meta = {},  // meta data about this device
             time = t,  // time stores the time at beginning of each transmission
-            bootcount = 0 // bootcount is incremented on each wakeup
+            bootcount = 0, // bootcount is incremented on each wakeup
+            
+                // default settings
+            PUMP = 1, // Pump controller Module?
+            XMIT_PERIOD = 60, // Time between transmissions
+            SAMPLE_PERIOD = 10 // Time between samples
         };
         // send Imp information to agent
         nv.meta[SSID] <- imp.getssid();
