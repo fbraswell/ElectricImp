@@ -2,6 +2,8 @@
 server.log("---AGENT START---");
 const XIVELY_URL = "https://api.xively.com/v2/feeds/";  // Xively base URL
 const XIVELY_Account_Authorization = "Basic a25pZ2h0aGF3azprbmlnM3QzOHdr"; // WellMark knighthawk auth
+const PUMP_MODE = 1;
+const TRANSDUCER_MODE = 0; 
 // myDevID <- "no Imp dev id yet";
 IMP_DEV_ID <- "no Imp dev id yet";
 XIVELY_FEED <- 0;   // Xively feed # will go here
@@ -10,6 +12,11 @@ XIVELY_API_ENDPOINT <- "no Xively endpoint yet";
 // agent_myapikey <- "no Xively feed key yet";
 XIVELY_API_KEY <- "no Xively feed key yet";
 
+IMP_SAMPLE_PER <- 10; // Default 10 sec sample period
+IMP_XMIT_PER <- 60; // Default 60 sec transmit period
+// IMP_MODE <- TRANSDUCER_MODE; // Mode 0 = transducer only; Mode 1 = Pump
+IMP_MODE <- PUMP_MODE; // Mode 0 = transducer only; Mode 1 = Pump
+
 // Get meta data from the device, which includes the
 // impID and ssid information
 
@@ -17,7 +24,7 @@ XIVELY_API_KEY <- "no Xively feed key yet";
 //  meta key: devid val: 235c87eb6e4936ee
 device.on("metadata", function(data)
     {
-        local makemeta = "";
+//        local makemeta = "";
         foreach (key, val in data)
         {
             server.log("meta key: "+key+" val: "+val);
@@ -31,6 +38,34 @@ device.on("metadata", function(data)
 // Get table data from device and form a csv file
 device.on("tabledata",function(data)
     {
+     //  First make sure that IMP_DEV_ID is defined
+    //  If not, get the information from the Imp
+    // This situation can happen during development when
+    // the agent code is updated, but the device code
+    // doesn't change    
+    if(IMP_DEV_ID == "no Imp dev id yet")
+    {
+        server.log("Don't have Imp dev id");
+        local obj = 0;
+        // See if I can catch it here - Imp must not be sleeping
+//        device.send("getImpInfo", obj);  // Request Information
+        device.onconnect(function() 
+        {
+            device.send("getImpInfo", obj);  // Request Information
+            server.log("Request Imp dev id"); 
+        });
+    } else
+    {
+        // Since device.onconnect stays active and executes with
+        // each connect, it is necessary to reset it at disconnect time.
+        // At disconnect time, turn off the device.onconnect procedure
+        // so the device.send("getImpInfo", obj) doesn't keep running
+        device.ondisconnect(function()
+        {
+            device.onconnect(function(){});
+        });
+    }    
+        
         local makecsv = ""; // used to build csv file for Xively
         foreach (key, val in data)
         {
@@ -84,7 +119,10 @@ function dataToXively(csv)
                 
     server.log("Xively Feed: "+XIVELY_FEED_NAME+
                 " ImpID: "+IMP_DEV_ID+
-                " length of package: "+body.len());
+                " pkg len: "+body.len()+
+                " sam per: "+IMP_SAMPLE_PER+
+                "s xmit per: "+IMP_XMIT_PER+"s "+
+                (IMP_MODE?"Pump Mode":"Transducer Mode") );
                 
 //  server.log("put request: "+request+" extra headers: "+extraHeaders);
   request.sendasync(dataToXivelyResponse);
@@ -106,6 +144,7 @@ function dataToXivelyResponse(response)
 }   // function dataToXivelyResponse(response) 
 
 // Get Xively/Imp connection data from a special Xively feed
+// called from device.on("metadata", function(data)
 function getXivelyFeedsTable()
 {
         // This is the feed URL for the Xively Feeds Table
@@ -118,9 +157,12 @@ function getXivelyFeedsTable()
 //                        "Authorization": "Basic a25pZ2h0aGF3azprbmlnM3QzOHdr"
                         "Authorization": XIVELY_Account_Authorization,
                         };
+        // Set up the get request
     local request = http.get(url, extraHeaders);
 //    request.sendasync(processResponseFeeds);
+        // Make the request
     local response = request.sendsync();
+        // Process the response
     getXivelyFeedsTableResponse(response);
     
 }   // function getXivelyFeedsTable()
@@ -201,16 +243,66 @@ function getXivelyFeedsTableResponse(response)
     server.log("Imp-Xively Table Info: Imp ID: "+xivelyInfo[0]+" Feed Name: "+xivelyInfo[1]+
                 " Feed ID: "+xivelyInfo[2]+" API key: "+xivelyInfo[3]);
         
-    IMP_DEV_ID  = xivelyInfo[0];
-    XIVELY_FEED_NAME = xivelyInfo[1];
-    
-    XIVELY_FEED = xivelyInfo[2];
-//    const XIVELY_URL = "https://api.xively.com/v2/feeds/";
-//    XIVELY_API_ENDPOINT = format("https://api.xively.com/v2/feeds/%s.csv", XIVELY_FEED);
-//    XIVELY_API_ENDPOINT = format("https://api.xively.com/v2/feeds/%s", XIVELY_FEED);
         // strip gets rid of whitespace at the beginning and end of the string - needed 
         // to get rid of new line
+    IMP_DEV_ID  = strip(xivelyInfo[0]);
+    XIVELY_FEED_NAME = strip(xivelyInfo[1]);
+    XIVELY_FEED = strip(xivelyInfo[2]);
     XIVELY_API_KEY = strip(xivelyInfo[3]);
+    
+    try // see if any of these are in the array
+    {
+        IMP_SAMPLE_PER = strip(xivelyInfo[4]);
+        IMP_XMIT_PER = strip(xivelyInfo[5]);
+        IMP_MODE = strip(xivelyInfo[6]).tointeger(); // MOTOR or TRANSDUCER mode
+    }  catch (e) 
+    {
+        // We don't care if it fails because default values will be there
+    }
+
+/*    
+        // The following items may also be included in the table
+    local xlen = xivelyInfo.len();
+    if(xlen >= 5)
+    {
+        IMP_SAMPLE_PER = strip(xivelyInfo[4]);
+    } else if(xlen >= 6)
+    {
+        IMP_XMIT_PER = strip(xivelyInfo[5]);
+    } else if(xlen >= 7)
+    {
+        IMP_MODE = strip(xivelyInfo[6]); // MOTOR or TRANSDUCER mode
+    }
+*/
+        // These should be either default values or set in the code above    
+    server.log("Imp samples period: "+IMP_SAMPLE_PER);
+    server.log("Imp transmit period: "+IMP_XMIT_PER);
+    server.log("Operating mode: "+(IMP_MODE?"Pump Mode":"Transducer Mode"));
+    
+    local vars = { "IMP_SAMPLE_PER" : IMP_SAMPLE_PER,
+                    "IMP_XMIT_PER" : IMP_XMIT_PER,
+                    "IMP_MODE" : IMP_MODE,
+                };
+    
+        // in order to use device.send, the device must not
+        // be asleep. If asleep, it never receives the send.
+        // To make sure device is awake, use the device.onconnect
+        // method to send the device.send request
+    device.onconnect(function() 
+    {
+        // Send information to device
+        device.send("impControlVariables", vars );
+        server.log("######## Device connected to agent - impControlVariables");
+    });
+
+        // Since device.onconnect stays active and executes with
+        // each connect, it is necessary to reset it at disconnect time.
+        // At disconnect time, turn off the device.onconnect procedure
+        // so the device.send(newsetpoint, num) doesn't keep running
+    device.ondisconnect(function()
+    {
+        device.onconnect(function(){});
+    });
     
         // diagnostic dump
 /*    foreach (key,val in data)
@@ -225,8 +317,8 @@ function requestHandler(request, response)
 {
     server.log("++++++++++++++received request++++++++++++++++");
     // Check if the variable led was passed into the query
-  if ("cmd1" in request.query) 
-  {
+//  if ("cmd1" in request.query) 
+//  {
     // if it was, send the value of it to the device
     // device.send("cmd1 found: ", request.query["cmd1"]);
     local num = 9;
@@ -246,7 +338,7 @@ function requestHandler(request, response)
     device.onconnect(function() 
     {
         device.send("newsetpoint", num);
-        server.log("######## Device connected to agent");
+        server.log("######## Device connected to agent - newsetpoint");
     });
 
         // Since device.onconnect stays active and executes with
@@ -259,41 +351,42 @@ function requestHandler(request, response)
     });
 
     server.log("cmd1 found in request.query: "+request.query.cmd1);
-  } // if ("cmd1" in request.query) 
+//  } // if ("cmd1" in request.query) 
   
 //    server.log("cmd1: "+request.query.cmd1);
 //    server.log("cmd2: "+request.query["cmd2"]);
 //    server.log("body of message: "+request.body);
     
-    try
-    {
-        local data;
-        data = http.urldecode(request.body);
-        server.log("urldecode of body: "+data);
-        local datajson;
-        datajson = http.jsondecode(data.body);
+//    try
+//    {
+ //       local data;
+//        local data = http.urldecode(request.body);
+//        local datajson;
+//        local datajson = http.jsondecode(data.body);
+        
+/*        
         foreach(key, val in datajson)
         {
 //            server.log("==url data.body key: "+key);
             server.log("==json decode of data.body key: "+key+" val: "+val);
         }
-        
-        server.log("datajson id: "+datajson.id);
-        server.log("datajson timestamp: "+datajson.timestamp);
-        server.log("datajson.triggering_datastream.id: "+datajson.triggering_datastream.id);
-        server.log("datajson.triggering_datastream.value.value: "+datajson.triggering_datastream.value.value);
+*/        
+//        server.log("datajson id: "+datajson.id);
+//        server.log("datajson timestamp: "+datajson.timestamp);
+//        server.log("datajson.triggering_datastream.id: "+datajson.triggering_datastream.id);
+//        server.log("datajson.triggering_datastream.value.value: "+datajson.triggering_datastream.value.value);
 /*
         data = http.base64decode(request.body);
         server.log("base 64 decode of body: "+data);
         data = http.jsondecode(request.body);
         server.log("json decode of body: "+data);
 */
-    } catch (e) 
-    {
+ //   } catch (e) 
+ //   {
         // send a response indicating invalid JSON
-        server.log("!!!!--Ivalid decode string");
+//        server.log("!!!!--Ivalid decode string");
         // response.send(500, "Invalid JSON string");
-    }
+//    }
 /*    
     foreach(key,val in request)
     {
@@ -304,12 +397,48 @@ function requestHandler(request, response)
         server.log("---request.query: "+key+": val: "+val);
     }
 */
-    // send a response back to whoever made the request
-    response.send(200, "OK");
+
+try
+    {
+        // send a response back to whoever made the request
+//        response.send(200, "OK");
+        response.send(200, "OK"); // "200: OK" is standard return message
+    }
+    catch (ex)
+    {
+        response.send(500, ("Agent Error: " + ex)); // Send 500 response if error occured
+    }
+    
 }   // function requestHandler(request, response)
 
     // set up the http request handler
 http.onrequest(requestHandler);
 
+/*
+//  First make sure that IMP_DEV_ID is defined
+//  If not, get the information from the Imp
+// This situation can happen during development when
+// the agent code is updated, but the device code
+// doesn't change   
+if(IMP_DEV_ID == "no Imp dev id yet")
+{
+    server.log("Don't have Imp dev id");
+    device.onconnect(function() 
+    {
+        local obj = [];
+        device.send("getImpInfo", obj);  // Request Information
+        server.log("Request Imp dev id"); 
+    });
+
+        // Since device.onconnect stays active and executes with
+        // each connect, it is necessary to reset it at disconnect time.
+        // At disconnect time, turn off the device.onconnect procedure
+        // so the device.send(newsetpoint, num) doesn't keep running
+    device.ondisconnect(function()
+    {
+        device.onconnect(function(){});
+    });
+}
+*/
 server.log("---AGENT CODE END---");
     
