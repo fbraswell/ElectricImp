@@ -1,0 +1,195 @@
+// Device code for Data Test
+// server.log("---DEVICE START---");
+
+// When the Imp comes out of deep sleep, it starts here
+// log an ADC value each 10 sec, only tell the server each minute 
+t <- time();
+// myrssi <- imp.rssi();
+const REGULATOR_ON = 0x01;
+const REGULATOR_OFF = 0x00;
+const XMIT_PERIOD = 60; // Time between transmissions
+const SAMPLE_PERIOD = 10; // Time between samples
+
+// constant strings
+// Making strings constants stops memory leaks because
+// the strings are not created multiple times, only once here.
+
+const TABLEDATA = "tabledata";
+const BOOTCOUNT = "bootcount";
+const TIME = "time";
+const SWITCH1 = "switch1";
+const SWITCH2 = "switch2";
+const VBAT = "vbat";
+const RSSI = "rssi";
+const MEMORY = "memory";
+const TEMP = "temp";
+
+
+const METADATA = "metadata";
+const SSID = "ssid";
+const DEVID = "devid";
+
+// Send data to the agent
+function transmitData() 
+{
+    // send gathered data
+//    agent.send("metadata", nv.meta);
+//    agent.send("tabledata", nv.sensor);
+    
+    // Also get switch values on pins 1 & 2
+    local sw1 = hardware.pin1.read();
+    local sw2 = hardware.pin2.read();
+    
+    // battery voltage on pin 9
+    local adval = hardware.pin9.read(); // 0 - 65535
+    local volts = (hardware.voltage()/4096.0) * (adval/16.0); 
+    // R1 = 357k and R2 = 96.7k (actual measurements)
+    // Vbat = V (R1 + R2)/R2    // from the voltage divider
+    // need to measure resistors for accuracy
+ //   local vbat = volts * (323.6 + 100.0)/100.0;
+ // measured ratio of 4.59
+    local vbat = volts * 4.59;
+    
+        // reset nv.data for next minute
+//    nv.data = format("bootcount, %d\ntime, %d\nBat, %.3f\nrssi, %d\n", nv.bootcount++, t, vbat, myrssi);
+//    nv.data += format("switch1a, %d\nswitch2a, %d\n", sw1, sw2);
+        // reset nv.sensor table for next minute
+//    nv.sensor = {};
+    nv.sensor[BOOTCOUNT] <- nv.bootcount++;
+    nv.sensor[TIME] <- t;
+    if(nv.bootcount > 1) // don't send with first xmits
+    {
+//        nv.sensor["rssi"] <- myrssi;
+//        nv.sensor["rssi"] <- imp.rssi();
+        nv.sensor[SWITCH1] <- sw1;
+        nv.sensor[SWITCH2] <- sw2;
+        
+        nv.sensor[VBAT] <- vbat;
+    }
+        // Static information about Imp
+    
+    // add this as metadata later
+//    server.log( format("network: %s; deviceID: %s; rssi: %d", imp.getssid(), hardware.getdeviceid(), imp.rssi() ) );
+/*
+    foreach (key, val in nv.sensor)
+    {
+//        server.log(format("time: %g volts: %8.4f",key , val));
+        server.log("time: "+key+", volts: "+val);
+    }
+*/
+        // nv.meta only needs to be sent one time, after a cold boot
+    if (nv.bootcount < 2)
+    {
+        nv.meta = {};    
+        nv.meta[SSID] <- imp.getssid();
+        nv.meta[DEVID] <- hardware.getdeviceid();
+        agent.send(METADATA, nv.meta);
+    }
+    
+    agent.send(TABLEDATA, nv.sensor);
+//    nv.sensor = {};
+    nv.sensor.clear();
+        // rssi must be sampled while the WiFi is turned on
+        // most of the time the WiFi is off, except here, where data has 
+        // just been transmitted.
+    nv.sensor[RSSI] <- imp.rssi();
+    nv.sensor[MEMORY] <- imp.getmemoryfree();
+//    server.log( format("network: %s; deviceID: %s; rssi: %d", imp.getssid(), hardware.getdeviceid(), imp.rssi() ) );
+//    nv.time = t;
+//    server.expectonlinein(XMIT_PERIOD);
+}   // function transmitData() 
+
+// log data in between transmit times
+function logdata() 
+{
+//  local min = (t/60) % 60;
+  local sec = t % 60;
+  
+  hardware.pin5.write(REGULATOR_ON); // turn on regulator
+//  for (local i=0; i < 100000; i++){ i = i; } // delay for regulator start-up
+  imp.sleep(0.25);
+    // Get sensor voltage
+  local volts = (hardware.voltage()/4096.0) * (hardware.pin7.read()/16.0); // calc pressure here 
+//  nv.data = nv.data + format("pvolts-%d, %.3f\n", t-nv.time, volts);
+  nv.sensor[t] <- volts;
+  
+    // Get temperature data from pin 8
+    local analogval = hardware.pin8.read(); // 0 - 65535 
+    local tempC = ((analogval * 0.00005035)-0.5)*100.0;                                                                                                           
+    local tempF = (9.0/5.0)*tempC + 32.0;
+//    nv.data += format("temp1-%d, %f\n", t-nv.time, tempF);
+    nv.sensor[TEMP] <- tempF;
+    
+  hardware.pin5.write(REGULATOR_OFF); // turn off regulator
+
+/*
+  if (sec <= 9) 
+  {
+      transmitData();
+  }
+  imp.onidle(function() { imp.deepsleepfor(10 - (time() % 10)); });
+*/
+
+//    imp.deepsleepfor(SAMPLE_PERIOD); 
+}   // function logdata() 
+
+// dispatch logdata() and transmitdata() if time for xmit
+function dispatch()
+{
+    
+    logdata();  // sample data first
+        // check to see if time to xmit
+    if (t >= (nv.time + XMIT_PERIOD))
+    {
+//        server.log("nv.time = "+nv.time+" time t = "+t);
+        nv.time = t; // save xmit time
+            // tell agent when to expect next transmission
+        server.expectonlinein(XMIT_PERIOD);
+        transmitData(); // transmit the data to agent
+    }
+//    logdata();  // sample data
+        // Sync to the sample period - sleep for one sample period
+    imp.onidle(function() { imp.deepsleepfor(SAMPLE_PERIOD - (time() % SAMPLE_PERIOD)); });
+}   // function dispatch()
+
+// Hardware set-up
+function hardwareSetUp()
+{
+// hardware.pin7.configure(ANALOG_IN); 
+// hardware.pin8.configure(DIGITAL_OUT);
+// hardware.pin9.configure(ANALOG_IN);
+
+    // hardware.pin1.configure(DIGITAL_IN_PULLUP);                                                                                                                    
+    hardware.pin1.configure(DIGITAL_IN_PULLUP);                                                                                                                       
+    // hardware.pin1.configure(DIGITAL_IN_PULLUP);                                                                                                                    
+    hardware.pin2.configure(DIGITAL_IN_PULLUP);
+    // Analog read on pin 7 for pressure                                                                                                                              
+    hardware.pin7.configure(ANALOG_IN); 
+    // Analog read on pin 9 for scaled battery voltage                                                                                                                             
+    hardware.pin9.configure(ANALOG_IN); 
+    // Digital Write on pin 5 - control 3V regulator for sensors                                                                                                      
+    hardware.pin5.configure(DIGITAL_OUT);
+    //    hardware.pin5.write(0x01 ^ nv.voltage_enable); // turn it off
+    // Analog read on pin 8 for temp                                                                                                                                  
+    hardware.pin8.configure(ANALOG_IN);
+}   // function hardwareSetUp()
+
+// if just turned on, and nv doesn't exist
+if (!("nv" in getroottable())) 
+{
+//    hardwareSetUp(); // set up the hardware pins
+    nv <- {     // data = "",  // data string accumulates data with each sample period
+            sensor = {}, // table for sensor data
+            meta = {},  // meta data about this device
+            time = t,  // time stores the time at beginning of each transmission
+            bootcount = 0 // bootcount is incremented on each wakeup
+        };
+    transmitData();
+//    logdata();
+}
+
+hardwareSetUp();
+dispatch(); // log and transmit
+// imp.onidle(logdata);
+//logdata();
+// server.log("---DEVICE CODE END---");
