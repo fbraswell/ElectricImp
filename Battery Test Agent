@@ -1,0 +1,223 @@
+// Agent code for Data Test
+server.log("---AGENT START---");
+const XIVELY_URL = "https://api.xively.com/v2/feeds/";  // Xively base URL
+const XIVELY_Account_Authorization = "Basic a25pZ2h0aGF3azprbmlnM3QzOHdr"; // WellMark knighthawk auth
+// myDevID <- "no Imp dev id yet";
+IMP_DEV_ID <- "no Imp dev id yet";
+XIVELY_FEED <- 0;   // Xively feed # will go here
+XIVELY_FEED_NAME <- "xively feed name"; // Xively Feed Name
+XIVELY_API_ENDPOINT <- "no Xively endpoint yet";
+// agent_myapikey <- "no Xively feed key yet";
+XIVELY_API_KEY <- "no Xively feed key yet";
+
+// Get meta data from the device, which includes the
+// impID and ssid information
+
+//  meta key: ssid val: FrankBraswellsPhone5s
+//  meta key: devid val: 235c87eb6e4936ee
+device.on("metadata", function(data)
+    {
+        local makemeta = "";
+        foreach (key, val in data)
+        {
+            server.log("meta key: "+key+" val: "+val);
+        }
+        // stash the imp ID for later use
+        IMP_DEV_ID <- data.devid;      
+        getXivelyFeedsTable();
+    }
+);  // device.on("metadata", function(data)
+
+// Get table data from device and form a csv file
+device.on("tabledata",function(data)
+    {
+        local makecsv = ""; // used to build csv file for Xively
+        foreach (key, val in data)
+        {
+            if(key.len() > 9) // time stamp string is longer than the other keys
+            {
+                    // build time string
+                local v = key.tointeger() - data["time"];
+                local t = date(key.tointeger());
+                local tformat = format("%4d-%02d-%02dT%02d:%02d:%02d", 
+                                        t.year, t.month + 1, t.day, t.hour, t.min, t.sec);
+// debug               server.log("table key: "+key+", val: "+val+" - time diff: "+v+" time: "+tformat);
+                    // build csv entry with name of chan, time, data value
+                makecsv += "pvolttest, "+tformat+", "+val+"\n";
+            } else
+            {
+// debug                server.log("table key: "+key+", val: "+val);
+                    // build csv entry with name of chan, data value
+                makecsv += key+", "+val+"\n";
+            }
+        }
+            // DEBUG dump csv string
+        server.log("----****----Make CSV:\n"+makecsv);
+            // send data to Xively feed
+        dataToXively(makecsv);
+    }
+);  // device.on("tabledata",function(data)
+
+// Prepare the request with a csv payload 
+function dataToXively(csv) 
+{    
+//    2107508645
+//  "iKZLtPhqDBWssrASLyNyot8n1pUc5pshqOZlCgqlip0WH0je"
+// format("https://api.xively.com/v2/feeds/%d.csv", XIVELY_FEED);
+//    local XIVELY_API_ENDPOINT = "https://api.xively.com/v2/feeds/"+2107508645+".csv";
+    local XIVELY_API_ENDPOINT = "https://api.xively.com/v2/feeds/"+XIVELY_FEED+".csv";
+//    local agent_myapikey = "iKZLtPhqDBWssrASLyNyot8n1pUc5pshqOZlCgqlip0WH0je";
+  local body =  csv;
+  local extraHeaders = {
+//                        "User-Agent": "xively-Imp-Lib/1.0", 
+                        "X-Api-Key": XIVELY_API_KEY,
+//                        "Authorization": "Basic a25pZ2h0aGF3azprbmlnM3QzOHdr",
+                        "Authorization": XIVELY_Account_Authorization,
+//                        "Content-Type": "text/csv",
+//                        "Content-Length": format("%d",body.len())
+//                        "Content-Length": body.len()
+                        };
+  local request = http.put(XIVELY_API_ENDPOINT, extraHeaders, body);
+//  server.log("API ENDPOINT: "+XIVELY_API_ENDPOINT+
+//                " myapikey: "+XIVELY_API_KEY+
+//                " length of package: "+body.len());
+                
+    server.log("Xively Feed: "+XIVELY_FEED_NAME+
+                " ImpID: "+IMP_DEV_ID+
+                " length of package: "+body.len());
+                
+//  server.log("put request: "+request+" extra headers: "+extraHeaders);
+  request.sendasync(dataToXivelyResponse);
+//   local response = request.sendsync();
+//   processResponse(response);
+}   // function dataToXively(csv) 
+
+// This is the completed-request callback function, which logs the
+// incoming response's message and status code
+function dataToXivelyResponse(response) 
+{
+    if (response.statuscode == 200)
+    {
+        return;
+    }
+        // print message if status code is not 200
+    server.log("Status Code Put dataToXively CSV: " + response.statuscode + 
+                ", Message: " + (response.body==""?"none":response.body));
+}   // function dataToXivelyResponse(response) 
+
+// Get Xively/Imp connection data from a special Xively feed
+function getXivelyFeedsTable()
+{
+        // This is the feed URL for the Xively Feeds Table
+    local url = "https://api.xively.com/v2/feeds/1879147064";
+//    local xively_apikey = "rOSourU7osPHSsLzveclcZGjVwhLek0GMhUPVhTfWwsMwY6v";  
+    local extraHeaders = {
+                        "X-Api-Key": "rOSourU7osPHSsLzveclcZGjVwhLek0GMhUPVhTfWwsMwY6v",
+//                        "User-Agent":"xively-Imp-Lib/1.0", 
+//                        "Content-Type":"text/csv",
+//                        "Authorization": "Basic a25pZ2h0aGF3azprbmlnM3QzOHdr"
+                        "Authorization": XIVELY_Account_Authorization,
+                        };
+    local request = http.get(url, extraHeaders);
+//    request.sendasync(processResponseFeeds);
+    local response = request.sendsync();
+    getXivelyFeedsTableResponse(response);
+    
+}   // function getXivelyFeedsTable()
+
+// This is the completed-request callback function, which logs the
+// incoming response's message and status code
+function getXivelyFeedsTableResponse(response) 
+{
+    server.log("Status Code Xively Feeds: " + response.statuscode + ", Message: " + 
+                (response.body==""?"none":response.body.slice(0,25)+"..."));
+                
+    // In the Special Xively Feed, under the description meta data field
+    // there are a group of lines such as the following.
+    // Each line contains a comma delimited fields that identify
+    
+    // impID, Xively feed name, feed id and feed api key.
+
+//    ImpID,       XivelyName,  XivelyFeed,      XivelyApiKey
+//  anyimp, SpecialData,   1879147064, rOSourU7osPHSsLzveclcZGjVwhLek0GMhUPVhTfWwsMwY6v
+//  235e9deb6e4936ee, WM235e9,   1932829324, 8HqPPy2ymRbzqZhT2TtdWM5h193oJmf8uQhoSdvtfxc9bAYA
+//  23219ab236a7c9ee, WM23219, 343437348, WlnQANSpdLKnerPxm62yhaxVVwEojtBjQT0Okru4zt7WDKwh
+    
+    // The goal here is to search through the lines with the imp ID (IMP_DEV_ID),
+    // find the line that starts with the imp ID, isolate the line, and
+    // split the line into the components.
+    
+    // take apart the response body and find Xively info
+    // First json decode the line. The data we are looking for
+    // is in the data.description string object
+    local data = http.jsondecode(response.body);
+        // match the line with the Imp DeviceID
+        // define a regex to look for the dev ID at the beginning
+        // of a line
+    local match = @"("+IMP_DEV_ID+@".*\n)"; // regex string defined
+        // compile the regex
+    local ex = regexp(match);
+        // apply the regular expression
+    local result = ex.capture(data.description);
+    local xivelyInfo; // array for Xively name, feed and api key
+        // xivelyInfo[0] = ImpID
+        // xivelyInfo[1] = XivelyName
+        // xivelyInfo[2] = XivelyFeed
+        // xivelyInfo[3] = XivelyApiKey
+    
+        // if the regular expression returns null, there is no match
+    if (result == null)
+    {
+        server.log("--result == null: no match in: "+data.description);
+        return;
+    }
+    
+            // if here, regular expression matched
+            // Next, grab the line with the imp ID and 
+            // split out the Xively feed information
+            
+            // result contains an array of tables with
+            // the begin and end position
+            // values for the match
+            
+//    server.log("search results for Imp-Xively Table: "+data.description.slice(result[0].begin,result[0].end));
+        // slice gets the string with imp ID
+        // split breaks the string apart by commas
+        // This gives an array with the following elements:
+        // impID,           Xively feed name,   feed id and feed api key.
+        // 235c87eb6e4936ee, PowerTest01,       2107508645, iKZLtPhqDBWssrASLyNyot8n1pUc5pshqOZlCgqlip0WH0je
+    xivelyInfo = split(data.description.slice(result[0].begin,result[0].end),", ");
+/*
+            foreach(valx in xivelyInfo)
+            {
+                server.log("Imp-Xively info: "+valx);
+            }
+*/
+//        }
+//    xivelyInfo[0] - Imp ID
+//    xivelyInfo[1] - Name of Xively Feed
+//    xivelyInfo[2] - Feed ID
+//    xivelyInfo[3] - API Key
+    server.log("Imp-Xively Table Info: Imp ID: "+xivelyInfo[0]+" Feed Name: "+xivelyInfo[1]+
+                " Feed ID: "+xivelyInfo[2]+" API key: "+xivelyInfo[3]);
+        
+    IMP_DEV_ID  = xivelyInfo[0];
+    XIVELY_FEED_NAME = xivelyInfo[1];
+    
+    XIVELY_FEED = xivelyInfo[2];
+//    const XIVELY_URL = "https://api.xively.com/v2/feeds/";
+//    XIVELY_API_ENDPOINT = format("https://api.xively.com/v2/feeds/%s.csv", XIVELY_FEED);
+//    XIVELY_API_ENDPOINT = format("https://api.xively.com/v2/feeds/%s", XIVELY_FEED);
+        // strip gets rid of whitespace at the beginning and end of the string - needed 
+        // to get rid of new line
+    XIVELY_API_KEY = strip(xivelyInfo[3]);
+    
+        // diagnostic dump
+/*    foreach (key,val in data)
+    {
+        server.log("feeds: "+key+": "+val);
+    }
+*/
+}   // function getXivelyFeedsTableResponse(response) 
+server.log("---AGENT CODE END---");
+    
