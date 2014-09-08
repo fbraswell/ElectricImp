@@ -1,4 +1,4 @@
-ImpID,       XivelyName,  XivelyFeed,      XivelyApiKey,                          IMP_SAMPLE_PER, IMP_XMIT_PER, IMP_MODE
+ImpID,       XivelyName,  XivelyFeed,      XivelyApiKey,                          IMP_SAMPLE_PER, IMP_XMIT_PER, IMP_MODE, IMP_ANALOG1_THRESHOLD, IMP_ANALOG1_RANGE
 
 anyimp, SpecialData,   1879147064, rOSourU7osPHSsLzveclcZGjVwhLek0GMhUPVhTfWwsMwY6v
 
@@ -24,4 +24,4 @@ anyimp, SpecialData,   1879147064, rOSourU7osPHSsLzveclcZGjVwhLek0GMhUPVhTfWwsMw
 
 2336aaeb6e4936ee, AcockESWDCrudeTank2, 858995072, jPjK3GmFtPv6gZ2RviO42vIy1tanqIEYG6U4hIuDxPSNzOJr, 60, 60, 0
 
-23533ceb6e4936ee, PowerTest02, 2090302358, 8PVzke5SDB0FFR2pbyzYSr2DhJkD7bdtvSQB7ae3hY5SAvV7, 10, 60, 0
+23533ceb6e4936ee, PowerTest02, 2090302358, 8PVzke5SDB0FFR2pbyzYSr2DhJkD7bdtvSQB7ae3hY5SAvV7, 10, 60, 0, 1.0, 0.2
