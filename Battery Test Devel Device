@@ -8,6 +8,31 @@ t <- time();
 const MBwrite = 1;
 const MBread = 0;
 
+const MBcoilON = 0xFF; // Most Significant Byte
+const MBcoilOFF = 0x00;
+
+const MBmotorON = 1; // turn pump motor on
+const MBmotorOFF = 0; // turn pump motor off
+const MBmotorCoilAddr = 0x01; 
+
+// Quarts per Day Info
+const MBqpdRegisterAddr = 0x03;
+const MBrealNumberRegisters = 0x02;
+const MBrealNumberBytes = 0x04;
+
+// Modbus command codes
+const MB_ReadCoil = 1;
+const MB_ReadDiscreteInput = 2;
+const MB_ReadHoldingRegister = 3;
+const MB_ReadInputRegister = 4;
+const MB_WriteSingleCoil = 5;
+const MB_WriteSingleHoldingRegister = 6;
+const MB_WriteMultipleCoils = 15;
+const MB_WriteMultipleHoldingRegisters = 16;
+
+// Time Mark controller registers
+const MB_ADDR_TimeMark = 0x10;
+
 const MB_ONTIME = "MB_OnTime";
 const MB_OFFTIME = "MB_OffTime";
 const MB_TEMPSETPOINT = "MB_TempSetPoint";
@@ -47,6 +72,7 @@ const MEMORY = "memory";
 const TEMP = "temp";
 const TEMP002 = "temp002";
 const ANALOG002 = "analog002";
+const LIGHTLEVEL = "lightlev";
 
 const METADATA = "metadata";
 const SSID = "ssid";
@@ -60,35 +86,18 @@ HW_Hall002 <- hardware.pinD;    // second Hall switch
 HW_UART002 <- hardware.uart6E;  // UART channel for serial RS-232
 
 // Pump with Modbus Mode 
-// HW_MBUart1 <- hardware.uart1289;
-// HW_FlowCount <- hardware.pin1;
-// HW_ModBusDir <- hardware.pin2;
-
-// Pump with Modbus Mode 
-HW_MBUart1 <- hardware.uart12;
-HW_FlowCount <- hardware.pin9;
-HW_ModBusDir <- hardware.pin8;
-
+ HW_MBUart1 <- hardware.uart1289;
+ HW_FlowCount <- hardware.pin1;
+ HW_ModBusDir <- hardware.pin2;
 
 HW_RegulatorCntl <- hardware.pin5; // common to both modes
-// HW_SensorIn <- hardware.pin7; // common to both modes
 HW_Analog1In <- hardware.pin7; // Analog channel 1
 
 // Transducer only mode        
-HW_Switch1 <- hardware.pin9;
-HW_Switch2 <- hardware.pin8;
-// HW_RegulatorCntl <- hardware.pin5; // common to both
-// HW_Analog1In <- hardware.pin7; // common to both
-HW_Temp <- hardware.pin2; // temp sensor voltage
-HW_BatV <- hardware.pin1; // battery voltage to Imp board
-
-// Transducer only mode        
-// HW_Switch1 <- hardware.pin1;
-//  HW_Switch2 <- hardware.pin2;
-// HW_RegulatorCntl <- hardware.pin5; // common to both
-// HW_Analog1In <- hardware.pin7; // common to both
-//  HW_Temp <- hardware.pin8; // temp sensor voltage
-//  HW_BatV <- hardware.pin9; // battery voltage to Imp board
+ HW_Switch1 <- hardware.pin1;
+ HW_Switch2 <- hardware.pin2;
+ HW_Temp <- hardware.pin8; // temp sensor voltage
+ HW_BatV <- hardware.pin9; // battery voltage to Imp board
 
 // Check for hi and lo conditions using hysteresis algorithm
 // Analog channel 1
@@ -98,7 +107,6 @@ HW_BatV <- hardware.pin1; // battery voltage to Imp board
 // Analog1Volts_switch <- 0; // switch starts at off
 
 XmitNow <- 0; // used to force Xmit to agent - starts false
-
 
 // UART Communication example for the Modbus communication
 // Transfer data from Imp uart, pins 1 CTS (not used by us), 2 RTS, 8 Tx, 9 Rx
@@ -126,11 +134,7 @@ agent.on("modem_write", function(str)
 agent.on("impControlVariables", function(vars)
 {
     // Get the variables for sample period, xmit period and Imp mode
-/*    
-    nv.PUMP = vars.IMP_MODE.tointeger(); // Pump controller Module?
-    nv.XMIT_PERIOD = vars.IMP_XMIT_PER.tofloat(); // Time between transmissions
-    nv.SAMPLE_PERIOD = vars.IMP_SAMPLE_PER.tofloat(); // Time between samples
-*/    
+    
     nv.PUMP = vars.IMP_MODE; // Pump controller Module?
     nv.XMIT_PERIOD = vars.IMP_XMIT_PER; // Time between transmissions
     nv.SAMPLE_PERIOD = vars.IMP_SAMPLE_PER; // Time between samples
@@ -142,10 +146,10 @@ agent.on("impControlVariables", function(vars)
     nv.Analog1Volts_hi = nv.IMP_ANALOG1_THRESHOLD + 0.5 * nv.IMP_ANALOG1_RANGE; // High voltage
     nv.Analog1Volts_lo = nv.IMP_ANALOG1_THRESHOLD - 0.5 * nv.IMP_ANALOG1_RANGE; // Low voltage
     
-    foreach(key, val in vars)
-    {
-        server.log("^^ Device control var key: "+key+" val: "+val);
-    }
+//    foreach(key, val in vars)
+//    {
+//        server.log("^^ Device control var key: "+key+" val: "+val);
+//    }
     server.log("---nv.PUMP: "+nv.PUMP+" nv.XMIT_PERIOD: "+nv.XMIT_PERIOD+" nv.SAMPLE_PERIOD: "+nv.SAMPLE_PERIOD+
                 " nv.IMP_ANALOG1_THRESHOLD: "+nv.IMP_ANALOG1_THRESHOLD+
                 " nv.IMP_ANALOG1_RANGE: "+nv.IMP_ANALOG1_RANGE+" nv.time: "+nv.time);
@@ -158,32 +162,36 @@ agent.on("newsetpoint", function(newsetpoint)
     writeQuartsPerDay(newsetpoint); 
 }); // agent.on("newsetpoint"
 
+// Turn the Modbus pump motor on or off
 function setMotorState(state) 
 {
+    if(state == MBmotorON)
+    {
+       return MBwriteSingleCoil(MB_ADDR_TimeMark, MBmotorCoilAddr, MBcoilON);
+    } else // MBmotorOFF
+    {
+        return MBwriteSingleCoil(MB_ADDR_TimeMark, MBmotorCoilAddr, MBcoilOFF);
+    }
+/*
+    //-----------------------------------
     local motorCommand = [];
     if (state == 1) 
-    {
-     motorCommand = [ 0x10, 0x05, 0x00, 0x01, 0xFF, 0x00, 0xDE, 0xBB ];
-    }
-    else 
-    {
-        motorCommand = [ 0x10, 0x05, 0x00, 0x01, 0x00, 0x00, 0x9F, 0x4B ]; 
+    {   motorCommand = [ 0x10, 0x05, 0x00, 0x01, 0xFF, 0x00, 0xDE, 0xBB ];
+    } else 
+    {   motorCommand = [ 0x10, 0x05, 0x00, 0x01, 0x00, 0x00, 0x9F, 0x4B ]; 
     }
     
     server.log("Setting motor to: " + state);
     imp.sleep(100.0/1000.0);
-//    hardware.pin2.write(1);
     HW_ModBusDir.write(1);
-//    imp.sleep(100.0/1000.0);
     foreach(val in motorCommand) 
     {
-//        hardware.uart1289.write(val);
         HW_MBUart1.write(val);
     }
     imp.sleep(10.0/1000.0);
-//    hardware.pin2.write(0);
     HW_ModBusDir.write(0);
     imp.sleep(100.0/1000.0);
+*/
 }   // function setMotorState(state) 
 
 function writeQuartsPerDay(value) 
@@ -200,14 +208,15 @@ function writeQuartsPerDay(value)
         // To turn the motor completely off, you must
         // use a different command to set the motor to off
     if (value.tofloat() > 0.1)
-        setMotorState(1);
+//        setMotorState(1);
+        setMotorState(MBmotorON);
     else
-        setMotorState(0);
+//        setMotorState(0);
+        setMotorState(MBmotorOFF);
     
     if (value.tofloat() > 0.1) 
     {
-//        local qpdCommand = [ 0x10, 0x06, 0x00, 0x03 ];
-         local qpdCommand = [ 0x10, 0x10, 0x00, 0x03, 0x00, 0x02, 0x04 ];
+        local qpdCommand = [ 0x10, 0x10, 0x00, 0x03, 0x00, 0x02, 0x04 ];
         
         local flBlob = blob(4);
         flBlob.writen(value.tofloat(), 'f');
@@ -219,29 +228,47 @@ function writeQuartsPerDay(value)
         
         local crc = calculateCRC(qpdCommand, qpdCommand.len());
         qpdCommand.extend(crc);
-        
+        local str = "++++ MB original string: ";
+        foreach(val in qpdCommand)
+        {
+            str = str + format(" 0x%02x", val);
+        }
+        server.log(str); // DEBUG
         server.log("Writing quarts per day");
+        
+        // Quarts per Day Info
+        // MBqpdRegisterAddr = 0x03;
+        // MBrealNumberRegisters = 0x02;
+        // MBrealNumberBytes = 0x04;
+        // four bytes of data
+        
+        // Write multiple holding registers
+
+
+return MBwriteMultipleHoldingRegisters(
+            MB_ADDR_TimeMark,
+            MBqpdRegisterAddr,
+            MBrealNumberRegisters, 
+            MBrealNumberBytes, 
+            // data array with number of bytes
+            [flBlob[3], flBlob[2], flBlob[1], flBlob[0]]);  
+
+//-------------------------------------        
 //         server.log("sent: "+byteArrayString(qpdCommand));
         imp.sleep(10.0/1000.0);
-//        hardware.pin2.write(1);
         HW_ModBusDir.write(1);
-//        imp.sleep(10.0/1000.0);
         foreach(val in qpdCommand) 
         {
-//            hardware.uart1289.write(val);
             HW_MBUart1.write(val);
         }
         imp.sleep(15.0/1000.0);
-//        hardware.pin2.write(0);
         HW_ModBusDir.write(0);
-//        imp.sleep(100.0/1000.0);
         imp.sleep(10.0/1000.0);
         
         // read response from setting qpd
          local byte = -1;
     // The a stands for all bytes but I didn't want to type it out so many times.
         local a = [];
-//        while ((byte = hardware.uart1289.read()) != -1) 
         while ((byte = HW_MBUart1.read()) != -1)
         {
             a.append(byte);
@@ -257,14 +284,19 @@ function writeQuartsPerDay(value)
 //************ CRC Calculation Code ***************
 //*************************************************
 
-function xbyteArrayString(arr){
+/*
+// not used??
+function xbyteArrayString(arr)
+{
     local str = ""
-    for(local i = 0; i < arr.len(); i++){
+    for(local i = 0; i < arr.len(); i++)
+    {
         if(arr[i] == null) break;
             str = str + format("%.2X ", arr[i]);
-        }
+    }
     return str;
 }
+*/
 
 // blob of CRC values for high–order byte
 const auchCRCHi = "\x00\xC1\x81\x40\x01\xC0\x80\x41\x01\xC0\x80\x41\x00\xC1\x81\x40\x01\xC0\x80\x41\x00\xC1\x81\x40\x00\xC1\x81\x40\x01\xC0\x80\x41\x01\xC0\x80\x41\x00\xC1\x81\x40\x00\xC1\x81\x40\x01\xC0\x80\x41\x00\xC1\x81\x40\x01\xC0\x80\x41\x01\xC0\x80\x41\x00\xC1\x81\x40\x01\xC0\x80\x41\x00\xC1\x81\x40\x00\xC1\x81\x40\x01\xC0\x80\x41\x00\xC1\x81\x40\x01\xC0\x80\x41\x01\xC0\x80\x41\x00\xC1\x81\x40\x00\xC1\x81\x40\x01\xC0\x80\x41\x01\xC0\x80\x41\x00\xC1\x81\x40\x01\xC0\x80\x41\x00\xC1\x81\x40\x00\xC1\x81\x40\x01\xC0\x80\x41\x01\xC0\x80\x41\x00\xC1\x81\x40\x00\xC1\x81\x40\x01\xC0\x80\x41\x00\xC1\x81\x40\x01\xC0\x80\x41\x01\xC0\x80\x41\x00\xC1\x81\x40\x00\xC1\x81\x40\x01\xC0\x80\x41\x01\xC0\x80\x41\x00\xC1\x81\x40\x01\xC0\x80\x41\x00\xC1\x81\x40\x00\xC1\x81\x40\x01\xC0\x80\x41\x00\xC1\x81\x40\x01\xC0\x80\x41\x01\xC0\x80\x41\x00\xC1\x81\x40\x01\xC0\x80\x41\x00\xC1\x81\x40\x00\xC1\x81\x40\x01\xC0\x80\x41\x01\xC0\x80\x41\x00\xC1\x81\x40\x00\xC1\x81\x40\x01\xC0\x80\x41\x00\xC1\x81\x40\x01\xC0\x80\x41\x01\xC0\x80\x41\x00\xC1\x81\x40";
@@ -279,7 +311,8 @@ function calculateCRC ( puchMsg, usDataLen )
     local uchCRCLo = 0xFF ; // low byte of CRC initialized
     local uIndex ; // will index into CRC lookup table
     local i = 0;
-    while (usDataLen--){ // pass through message buffer
+    while (usDataLen--)
+    { // pass through message buffer
         uIndex = uchCRCLo ^ puchMsg[i] ; // calculate the CRC
         uchCRCLo = uchCRCHi ^ auchCRCHi[uIndex] ;
         uchCRCHi = auchCRCLo[uIndex] ;
@@ -290,48 +323,179 @@ function calculateCRC ( puchMsg, usDataLen )
 
 //*************************************************
 
+// read from MB channel
+function readMB()
+{
+    HW_ModBusDir.write(MBread);
+    imp.sleep(10.0/1000.0); // wait for response
+    
+    local byte = -1;
+    // The a stands for all bytes but I didn't want to type it out so many times.
+    local MBbytes = [];
+        // Read MB register data from UART
+    while ((byte = HW_MBUart1.read()) != -1)
+    {
+        MBbytes.append(byte); // add byte to end of array
+        imp.sleep(100.0/1000.0);    // wait for next byte
+    } 
+    return MBbytes;
+} // readMB()
+
+// write to MB channel
+function writeMB(MBarray)
+{
+    // calculate the crc error code
+    local crc = calculateCRC(MBarray, MBarray.len());
+    // attach crc to end of array
+    MBarray.extend(crc);
+    local str = "++++ MB writeMB string: "; 
+    foreach(val in MBarray)
+        {
+            str = str + format(" 0x%02x", val);
+        }
+//        server.log(str); // DEBUG
+    
+    // set chip for write to MB
+    HW_ModBusDir.write(MBwrite);
+    // send each byte to MB device
+    foreach(val in MBarray)
+    {
+        HW_MBUart1.write(val);
+    }
+    // need small delay to let bytes finish sending
+//    imp.sleep(15.0/1000.0); // wait for response
+    // Adjust the delay based on the number of bytes sent
+    imp.sleep(MBarray.len() / 1000.0);
+//    server.log("---write MB---");
+} // writeMB(MBarray)
+
+
+// qpdCommand = [ 0x10, 0x10, 0x00, 0x03, 0x00, 0x02, 0x04 ];
+// Quarts per Day Info
+// const MBqpdRegisterAddr = 0x03;
+// const MBrealNumberRegisters = 0x02;
+// const MBrealNumberBytes = 0x04;
+
+// MBqpdRegisterAddr, 
+// MBrealNumberRegisters, 
+// MBrealNumberBytes, 
+// dataArray
+
+// Write multiple holding registers
+function MBwriteMultipleHoldingRegisters(MBaddr,
+                        startAddr,
+                        numRegisters, 
+                        numBytes, 
+                        array)
+{
+    local MBcmd = [MBaddr, MB_WriteMultipleHoldingRegisters,
+                    // Big Endian MSByte first
+                    // assume for now, MSByte is 0
+                    0, startAddr
+                    // number of registers to send
+                    0, numRegisters,
+                    // the number of bytes
+                    numBytes]
+
+    // append array bytes onto end of MBcmd
+    foreach(val in array)
+    {
+        MBcmd.append(val);
+    }
+    local str = "++++ MB string: ";
+    foreach(val in MBcmd)
+    {
+        str = str + format(" 0x%02x", val);
+    }
+    server.log(str); // DEBUG
+    writeMB(MBcmd); // send MB data 
+    return readMB();
+} // function MBwriteMultipleHoldingRegisters()
+
+// motorCommand = [ 0x10, 0x05, 0x00, 0x01, 0xFF, 0x00 ]; // motor on
+// motorCommand = [ 0x10, 0x05, 0x00, 0x01, 0x00, 0x00 ]; // motor off
+
+// Write single coil
+function MBwriteSingleCoil(MBaddr, coilAddr, coilValue)
+{
+    local MBcmd = [MBaddr, MB_WriteSingleCoil,
+                    // Big Endian MSByte first
+                    // assume for now, MSByte is 0
+                    0, coilAddr,
+                    // the upper byte is the value
+                    coilValue, 0];
+    writeMB(MBcmd);
+    return readMB();
+} // function MBwriteSingleCoil()
+
+// Read MB holding registers - code 3
+// return the MB response
+function MBreadHoldingRegisters(MBaddr, startAddr, endAddr)
+{
+        // MB command: MBaddr byte, MBcode byte, start addr word, end addr word
+    local MBcmd = [MBaddr, MB_ReadHoldingRegister
+                    // Big Endian MSByte first
+                    // assume for now, MSByte is 0
+                    0, startAddr, 
+                    0, endAddr];
+    writeMB(MBcmd); // send the command
+        // read the response and return array
+    return readMB();
+} // function MBreadHoldingRegisters(MBaddr, startAddr, endAddr)
+
+/*
+// write byte array to MB channel
 function requestRegisterInfo()
 {
+    MBreadHoldingRegisters(MB_ADDR_TimeMark, 0, 15);
+//    writeMB([ 0x10, 0x03, 0x00, 0x00, 0x00, 0x0F ]);
+    return; // DEBUG TEST
+    
     // write hex "10 03 00 00 00 0F 06 8F"
     local requestRegisters = [ 0x10, 0x03, 0x00, 0x00, 0x00, 0x0F ];
+    // calculate the crc code for requestRegisters string
     local crc = calculateCRC(requestRegisters, requestRegisters.len());
+    // add the crc code to the end of the string
     requestRegisters.extend(crc);
-    // This requests the register data
-    foreach(val in requestRegisters) {
-//        hardware.uart1289.write(val);
+    // Send request - This requests the register data
+    foreach(val in requestRegisters) 
+    {
         HW_MBUart1.write(val);
     }
 }   // requestRegisterInfo()
+*/
 
-// function handleModbus() 
+// Get Modbus holding register data & decode it
 function logMB() 
 {
 //    local d = date(); 
     
 //    server.log("Reading values from MODBUS registers");
-//    hardware.pin2.write(1); // MB write
+/*
     HW_ModBusDir.write(1);
     requestRegisterInfo();  // send MB read registers command string
+    // need small delay to let bytes finish sending
     imp.sleep(10.0/1000.0); // wait for response
-//    hardware.pin2.write(0); // MB read
+    // turn on the read mode on the 485 chip
+    
     HW_ModBusDir.write(0);
     imp.sleep(10.0/1000.0); // wait for response
-    
- //   agent.send("impid", {ImpID = format("%s",hardware.getimpeeid())});
     
     local byte = -1;
     // The a stands for all bytes but I didn't want to type it out so many times.
     local a = [];
         // Read MB register data from UART
-//    while ((byte = hardware.uart1289.read()) != -1)
     while ((byte = HW_MBUart1.read()) != -1)
     {
         a.append(byte); // add byte to end of array
         imp.sleep(100.0/1000.0);    // wait for next byte
     }
+*/
+    // The a stands for all bytes but I didn't want to type it out so many times.
+    local a = [ ];
+    a = MBreadHoldingRegisters(MB_ADDR_TimeMark, 0, 15);
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
-//    local csvPayload = "";
     if (a.len() > 0) 
     {   // MB Data available in the array
         local onTime = (a[3] << 8) | a[4];
@@ -345,7 +509,6 @@ function logMB()
         qpd.writen(a[9], 'b');
         qpd.seek(0, 'b');
         local quartsPerDay = qpd.readn('f');
-        
 
         nv.sensor[MB_QUARTSPERDAY] <- quartsPerDay;
         nv.sensor[MB_CYCLES] <- (a[13] << 24) | (a[14] << 16) | (a[15] << 8) | a[16];
@@ -380,7 +543,6 @@ function logMB()
 } // function logMB() 
 //*************************************************
 
-
 // Send data to the agent
 function transmitData() 
 {
@@ -395,6 +557,7 @@ function transmitData()
         // just been transmitted.
     nv.sensor[RSSI] <- imp.rssi();
     nv.sensor[MEMORY] <- imp.getmemoryfree();
+    nv.sensor[LIGHTLEVEL] <- hardware.lightlevel();
 }   // function transmitData() 
 
 // log data in between transmit times
@@ -403,13 +566,10 @@ function logdata()
 //  local min = (t/60) % 60;
   local sec = t % 60;
   
-//  hardware.pin5.write(REGULATOR_ON); // turn on regulator
   HW_RegulatorCntl.write(REGULATOR_ON); // turn on regulator
   imp.sleep(REGULATOR_DELAY); // Wait for regulator voltage to come up
         // While waiting for regulator, read switches
-//    nv.sensor[SWITCH1] <- hardware.pin1.read();
     nv.sensor[SWITCH1] <- HW_Switch1.read();
-//    nv.sensor[SWITCH2] <- hardware.pin2.read();
     nv.sensor[SWITCH2] <- HW_Switch2.read();
     // also read battery voltage on pin 9
 //    local adval = hardware.pin9.read(); // 0 - 65535
@@ -423,14 +583,9 @@ function logdata()
     // measured ratio of 4.59
     local vbat = volts * 4.59;
     nv.sensor[VBAT] <- vbat;
-//  imp.sleep(0.25); // Wait for regulator voltage to come up
-//  imp.sleep(REGULATOR_DELAY); // Wait for regulator voltage to come up
     // Get sensor voltage
-//  local volts = (hardware.voltage()/4096.0) * (hardware.pin7.read()/16.0); // calc pressure here 
   local Analog1Volts = (hardware.voltage()/4096.0) * (HW_Analog1In.read()/16.0); // calc pressure here 
-  
-//  nv.data = nv.data + format("pvolts-%d, %.3f\n", t-nv.time, volts);
-  nv.sensor[t] <- Analog1Volts;
+    nv.sensor[t] <- Analog1Volts;
 
         // Implelent hysteresis algorithm
         // Check for first time over the threshold   
@@ -447,15 +602,12 @@ function logdata()
   }
   
     // Get temperature data from pin 8
-//    local analogval = hardware.pin8.read(); // 0 - 65535 
     local analogval = HW_Temp.read(); // 0 - 65535 
     
     local tempC = ((analogval * 0.00005035)-0.5)*100.0;                                                                                                           
     local tempF = (9.0/5.0)*tempC + 32.0;
-//    nv.data += format("temp1-%d, %f\n", t-nv.time, tempF);
     nv.sensor[TEMP] <- tempF;
     
-//  hardware.pin5.write(REGULATOR_OFF); // turn off regulator
   HW_RegulatorCntl.write(REGULATOR_OFF); // turn off regulator
 }   // function logdata() 
 
@@ -463,18 +615,12 @@ function logdata()
 // used when in Modbus mode
 function logpressure() 
 {
-//  local min = (t/60) % 60;
   local sec = t % 60;
   
-//  hardware.pin5.write(REGULATOR_ON); // turn on regulator
   HW_RegulatorCntl.write(REGULATOR_ON); // turn on regulator
-//  imp.sleep(0.25); // Wait for regulator voltage to come up
   imp.sleep(REGULATOR_DELAY); // Wait for regulator voltage to come up
     // Get sensor voltage
-//  local volts = (hardware.voltage()/4096.0) * (hardware.pin7.read()/16.0); // calc pressure here 
   local Analog1Volts = (hardware.voltage()/4096.0) * (HW_Analog1In.read()/16.0); // calc pressure here 
-//  HW_Analog1In
-//  nv.data = nv.data + format("pvolts-%d, %.3f\n", t-nv.time, volts);
   nv.sensor[t] <- Analog1Volts;
   
           // Implement hysteresis algorithm
@@ -492,20 +638,15 @@ function logpressure()
   }
   
   // Get temperature data from pin 8
-//    local analogval = hardware.pin8.read(); // 0 - 65535 
     local analogval = HW_Temp002.read(); // 0 - 65535 
     
     local tempC = ((analogval * 0.00005035)-0.5)*100.0;                                                                                                           
     local tempF = (9.0/5.0)*tempC + 32.0;
-//    nv.data += format("temp1-%d, %f\n", t-nv.time, tempF);
     nv.sensor[TEMP002] <- tempF;
     
     // get analog data from IMP002 channel
     Analog1Volts = (hardware.voltage()/4096.0) * (HW_AnalogIn002.read()/16.0); // calc pressure here 
     nv.sensor[ANALOG002] <- Analog1Volts;
-  
-//  hardware.pin5.write(REGULATOR_OFF); // turn off regulator
-//  HW_RegulatorCntl.write(REGULATOR_OFF); // turn off regulator
 }   // function logpressure() 
 
 // callback for Hall switch 1 flowcount
@@ -568,7 +709,7 @@ function hardwareSetUp()
     // IMP002 I/O pins - Available in both modes
      HW_Temp002.configure(ANALOG_IN); // temperature sensor
      HW_AnalogIn002.configure(ANALOG_IN); // second analog channel
-     HW_Hall002.configure(DIGITAL_IN, hall2); // second hall switch
+//     HW_Hall002.configure(DIGITAL_IN, hall2); // second hall switch
             // UART connection to RS-232 channel
             // Pin 6 and Pin E are used for Write & Read
             // readback function called for incoming bytes
@@ -577,70 +718,35 @@ function hardwareSetUp()
      // Analog on pin7 is avail in both modes
      HW_Analog1In.configure(ANALOG_IN); 
     
-// const PUMP_MODE = 1;
-// const TRANSDUCER_MODE = 0; 
+//  PUMP_MODE = 1;
+//  TRANSDUCER_MODE = 0; 
     if(nv.PUMP == PUMP_MODE)
     {
-/*
-        HW_Uart1 <- hardware.uart1289;
-        HW_FlowCount <- hardware.pin1;
-        HW_ModBusDir <- hardware.pin2;
-        HW_RegulatorCntl <- hardware.pin5;
-        HW_SensorIn <- hardware.pin7
-*/
-//        server.log("--Pump Mode - Hardware ModBus");
             // UART connection to RS-485 channel
             // Pin 8 and Pin 9 are used for Write & Read
             // Pins 1 & 2 are not used for uart and are reassigned below
-//        hardware.uart1289.configure(9600, 8, PARITY_NONE, 1, NO_CTSRTS);
         HW_MBUart1.configure(9600, 8, PARITY_NONE, 1, NO_CTSRTS);
             // Pin 1 is Hall switch pulse input
-//        hardware.pin1.configure(DIGITAL_IN, flowmetercount());
-//        hardware.pin1.configure(DIGITAL_IN);
         HW_FlowCount.configure(DIGITAL_IN_PULLUP, hall1); // flow meter count
+        HW_Hall002.configure(DIGITAL_IN, hall2); // second hall switch
             // Pin 2 control direction of RS-485 Read or Write
-//        hardware.pin2.configure(DIGITAL_OUT);
         HW_ModBusDir.configure(DIGITAL_OUT);
-        // hardware.pin5.write(0x01 ^ nv.voltage_enable); // turn it off
         // Digital Write on pin 5 - control 3V regulator for sensors                                                                                                      
-//        hardware.pin5.configure(DIGITAL_OUT);
         HW_RegulatorCntl.configure(DIGITAL_OUT);
             // Pressure Sensor input
-//        hardware.pin7.configure(ANALOG_IN);
-//        HW_Analog1In.configure(ANALOG_IN);
     } else
     {   // Transducer Mode
-/*
-        HW_Switch1 <- hardware.pin1;
-        HW_Switch2 <- hardware.pin2;
-        HW_RegulatorCntl <- hardware.pin5;
-        HW_SensorIn <- hardware.pin7;
-        HW_Temp <- hardware.pin8;
-        HW_BatV <- hardware.pin9;
-*/
 //        server.log("Transducer Mode - Hardware Analog Input");
         // switch1 
-//        hardware.pin1.configure(DIGITAL_IN_PULLUP);
-//        HW_Switch1.configure(DIGITAL_IN_PULLUP);
         HW_Switch1.configure(DIGITAL_IN);
         // switch2
-//        hardware.pin2.configure(DIGITAL_IN_PULLUP);
-//        HW_Switch2.configure(DIGITAL_IN_PULLUP);
         HW_Switch2.configure(DIGITAL_IN);
-        // hardware.pin5.write(0x01 ^ nv.voltage_enable); // turn it off
         // Digital Write on pin 5 - control 3V regulator for sensors                                                                                                      
-//        hardware.pin5.configure(DIGITAL_OUT);
         HW_RegulatorCntl.configure(DIGITAL_OUT);
-        // Analog read on pin 7 for pressure                                                                                                                              
-//        hardware.pin7.configure(ANALOG_IN); 
-//        HW_Analog1In.configure(ANALOG_IN); 
         // Analog read on pin 8 for temp                                                                                                                                  
-//        hardware.pin8.configure(ANALOG_IN);
         HW_Temp.configure(ANALOG_IN);
         // Analog read on pin 9 for scaled battery voltage                                                                                                                             
-//        hardware.pin9.configure(ANALOG_IN); 
         HW_BatV.configure(ANALOG_IN); 
-        
     }
 }   // function hardwareSetUp()
 
@@ -652,11 +758,6 @@ function dispatch()
     t = time();
     if(nv.PUMP == NOT_CONFIGURED)
     {
-//        agent.send(METADATA, nv.meta);
-//        server.log("-Device not configured!");
-            // shallow sleep for a short time
-            // waiting for agent to send
-            // parameters
         imp.onidle(function()
         {
             server.log("-Device not configured!");
@@ -670,16 +771,14 @@ function dispatch()
     imp.onidle(null);
         // Now we can set-up hardware with nv.PUMP defined
     hardwareSetUp();
-// const PUMP_MODE = 1;
-// const TRANSDUCER_MODE = 0;     
+//  PUMP_MODE = 1;
+//  TRANSDUCER_MODE = 0;     
     if(nv.PUMP == PUMP_MODE)
     {
-//        server.log("--Pump Mode logMB");
         logMB(); // sample MB registers
         logpressure(); 
     } else if (nv.PUMP == TRANSDUCER_MODE)
     {
-//        server.log("--Transducer Mode logdata");
         logdata();  // sample analog data first
     } else
     {
@@ -692,18 +791,14 @@ function dispatch()
         // increment bootcount with each xmit
 //        nv.sensor[BOOTCOUNT] <- nv.bootcount++;
         // send xmit time data
-//        nv.sensor[TIME] <- t;
         nv.time = t; // save xmit time
             // get Imp rssi and memory info
             // only send at startup
-//        getImpInfo();
             // tell agent when to expect next transmission
         server.expectonlinein(nv.XMIT_PERIOD);
         transmitData(); // transmit the data to agent
-            // DEBUG
-//        server.log("---nv.PUMP: "+nv.PUMP+" nv.XMIT_PERIOD: "+nv.XMIT_PERIOD+" nv.SAMPLE_PERIOD: "+nv.SAMPLE_PERIOD+" nv.time: "+nv.time);
     }
-//    logdata();  // sample data
+
         // Sync to the sample period - sleep for one sample period
     if(nv.PUMP == PUMP_MODE)
     {
@@ -755,16 +850,10 @@ if (!("nv" in getroottable()))
         nv.meta[SSID] <- imp.getssid();
         nv.meta[DEVID] <- hardware.getdeviceid();
         agent.send(METADATA, nv.meta);
-        
-//    transmitData();
-//    logdata();
 }
 
-// hardwareSetUp();
     // dispatch logs data and then decides if
     // it is time to send data package to agent
 dispatch(); // log and transmit
-// imp.onidle(logdata);
-//logdata();
 // server.log("---DEVICE CODE END---");
 
