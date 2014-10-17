@@ -59,7 +59,7 @@ device.on("metadata", function(data)
 // Get table data from device and form a csv file
 device.on("tabledata",function(data)
     {
-     //  First make sure that IMP_DEV_ID is defined
+    //  First make sure that IMP_DEV_ID is defined
     //  If not, get the information from the Imp
     // This situation can happen during development when
     // the agent code is updated, but the device code
@@ -88,8 +88,18 @@ device.on("tabledata",function(data)
     }    
         
         local makecsv = ""; // used to build csv file for Xively
+        local keys = [ ];
         foreach (key, val in data)
         {
+            keys.push(key);
+        }
+        keys.sort();
+//        server.log("++++++++keys length: "+keys.len());
+//        foreach (key, val in data)
+        foreach (key in keys)
+        {
+//            server.log("+++++ key: "+key);
+            local val = data[key];
             if(key.len() > 9 && (key.find("MB") == null)) // time stamp string is longer than the other keys
             {
                     // build time string
@@ -122,7 +132,6 @@ function dataToXively(csv)
   local extraHeaders = {
 //                        "User-Agent": "xively-Imp-Lib/1.0", 
                         "X-Api-Key": XIVELY_API_KEY,
-//                        "Authorization": "Basic a25pZ2h0aGF3azprbmlnM3QzOHdr",
                         "Authorization": XIVELY_Account_Authorization,
 //                        "Content-Type": "text/csv",
 //                        "Content-Length": format("%d",body.len())
@@ -224,7 +233,6 @@ function getXivelyFeedsTableResponse(response)
         server.log("--result == null: no match in: "+data.description);
         return;
     }
-    
             // if here, regular expression matched
             // Next, grab the line with the imp ID and 
             // split out the Xively feed information
@@ -240,13 +248,7 @@ function getXivelyFeedsTableResponse(response)
         // impID,           Xively feed name,   feed id and feed api key.
         // 235c87eb6e4936ee, PowerTest01,       2107508645, iKZLtPhqDBWssrASLyNyot8n1pUc5pshqOZlCgqlip0WH0je
     xivelyInfo = split(data.description.slice(result[0].begin,result[0].end),", ");
-/*
-            foreach(valx in xivelyInfo)
-            {
-                server.log("Imp-Xively info: "+valx);
-            }
-*/
-//        }
+
 //    xivelyInfo[0] - Imp ID
 //    xivelyInfo[1] - Name of Xively Feed
 //    xivelyInfo[2] - Feed ID
@@ -256,22 +258,15 @@ function getXivelyFeedsTableResponse(response)
         
         // strip gets rid of whitespace at the beginning and end of the string - needed 
         // to get rid of new line
-//    IMP_DEV_ID  = strip(xivelyInfo[0]);
     IMP_DEV_ID  = strip(xivelyInfo[X_IMP_DEV_ID]);
-//    XIVELY_FEED_NAME = strip(xivelyInfo[1]);
     XIVELY_FEED_NAME = strip(xivelyInfo[X_XIVELY_FEED_NAME]);
-//    XIVELY_FEED = strip(xivelyInfo[2]);
     XIVELY_FEED = strip(xivelyInfo[X_XIVELY_FEED]);
-//    XIVELY_API_KEY = strip(xivelyInfo[3]);
     XIVELY_API_KEY = strip(xivelyInfo[X_XIVELY_API_KEY]);
     
     try // see if any of these are in the array
     {
-//        IMP_SAMPLE_PER = strip(xivelyInfo[4]).tofloat();
         IMP_SAMPLE_PER = strip(xivelyInfo[X_IMP_SAMPLE_PER]).tofloat();
-//        IMP_XMIT_PER = strip(xivelyInfo[5]).tofloat();
         IMP_XMIT_PER = strip(xivelyInfo[X_IMP_XMIT_PER]).tofloat();
-//        IMP_MODE = strip(xivelyInfo[6]).tointeger(); // MOTOR or TRANSDUCER mode
         IMP_MODE = strip(xivelyInfo[X_IMP_MODE]).tointeger(); // MOTOR or TRANSDUCER mode
         
         IMP_ANALOG1_THRESHOLD = strip(xivelyInfo[X_IMP_ANALOG1_THRESHOLD]).tofloat();
@@ -299,7 +294,6 @@ function getXivelyFeedsTableResponse(response)
         // Send information to device
         device.send("impControlVariables", vars );
 
-    
         // in order to use device.send, the device must not
         // be asleep. If asleep, it never receives the send.
         // To make sure device is awake, use the device.onconnect
@@ -319,8 +313,6 @@ function getXivelyFeedsTableResponse(response)
     {
         device.onconnect(function(){});
     });
-
-    
 }   // function getXivelyFeedsTableResponse(response) 
 
 // handle a trigger from Xively
@@ -331,13 +323,6 @@ function requestHandler(request, response)
     // device.send("cmd1 found: ", request.query["cmd1"]);
     local num = 9;
     local data;
-        // decode the url
-//    data = http.urldecode(request.body);
-//    local datajson;
-        // now decode json to make an object
-//    datajson = http.jsondecode(data.body);
-        // get the value of the new setting from the object
-//    num = datajson.triggering_datastream.value.value;
 
     if (request.query.cmd1.find("go", 1) )
     {
@@ -380,7 +365,6 @@ function requestHandler(request, response)
 try
     {
         // send a response back to whoever made the request
-//        response.send(200, "OK");
         response.send(200, "OK"); // "200: OK" is standard return message
     }
     catch (ex)
@@ -394,31 +378,5 @@ try
     // for Xively set qpd trigger
 http.onrequest(requestHandler);
 
-/*
-//  First make sure that IMP_DEV_ID is defined
-//  If not, get the information from the Imp
-// This situation can happen during development when
-// the agent code is updated, but the device code
-// doesn't change   
-if(IMP_DEV_ID == "no Imp dev id yet")
-{
-    server.log("Don't have Imp dev id");
-    device.onconnect(function() 
-    {
-        local obj = [];
-        device.send("getImpInfo", obj);  // Request Information
-        server.log("Request Imp dev id"); 
-    });
-
-        // Since device.onconnect stays active and executes with
-        // each connect, it is necessary to reset it at disconnect time.
-        // At disconnect time, turn off the device.onconnect procedure
-        // so the device.send(newsetpoint, num) doesn't keep running
-    device.ondisconnect(function()
-    {
-        device.onconnect(function(){});
-    });
-}
-*/
 server.log("---AGENT CODE END---");
     
