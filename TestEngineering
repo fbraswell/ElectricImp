@@ -1,0 +1,216 @@
+// server.log("-- Start program --");
+
+ID <- hardware.getdeviceid();
+if ( ID == "20000c2a69022926")
+{
+    server.log("---Found 926 Test Controller")
+} else
+{
+    server.log("---Device under Test");
+}
+
+// These values may be different for your servo
+const SERVO_MIN = 0.027;
+const SERVO_MAX = 0.1235;
+
+const PERIOD = 4.0; // cycle period in sec
+
+// Steps run from 0 to 1.0
+const STEPS = 180;
+
+// Serial RS-232 on pins 6, E
+rs232 <- hardware.uart6E;
+
+// Modbus RS-485 on pins 8, 9
+rs485 <- hardware.uart1289;
+
+const rs485write = 1;
+const rs485read = 0;
+
+rs485_dir <- hardware.pin2;
+rs485_dir.configure(DIGITAL_OUT);
+
+// switch2out <- hardware.pin6;
+// switch2out.configure(DIGITAL_OUT);
+
+// Below are channels for Test Module
+// create global variable for servo and configure
+servo <- hardware.pinC;
+servo.configure(PWM_OUT, 0.02, SERVO_MIN);
+
+analog1out <- hardware.pin1;
+analog1out.configure(ANALOG_OUT);
+
+analog2out <- hardware.pin5;
+analog2out.configure(ANALOG_OUT);
+
+// Below are channels for Device Under Test DUT
+// analog 1 in
+
+// analog 2 in
+
+// switch 1 in
+
+// switch 2 in
+
+// Hall switch 1 in
+
+// Hall switch 2 in
+
+// expects a value between 0.0 and 1.0
+function SetServo(value) 
+{
+  local scaledValue = value * (SERVO_MAX-SERVO_MIN) + SERVO_MIN;
+  servo.write(scaledValue);
+}
+ 
+// expects a value between -80.0 and 80.0
+function SetServoDegrees(value) 
+{
+  local scaledValue = (value + 81) / 161.0 * (SERVO_MAX-SERVO_MIN) + SERVO_MIN;
+  servo.write(scaledValue);
+}
+
+// called when bytes are received on RS-232
+// Function triggered by receipt of a byte from the connected computer
+// Adds the input byte as an alphanumeric character to a buffer string
+// which is displayed in the log when the remote user hits Enter
+input_string_232 <- ""; // initialize string
+function rs232_readback()
+{
+    local byte = rs232.read();
+        // ignore initial input
+    if (byte == -1) return;
+    if (byte == 13)
+    {   // handle receipt of CR
+        // Output string and reset input_string for next set of chars
+        server.log("-Received 232: "+input_string_232);
+        input_string_232 = ""; // reset string
+    } else
+    {
+        // add input character to input_string buffer
+        input_string_232 = input_string_232 + chr(byte);
+    }
+}   // function rs232_readback()
+
+input_string_485 <- ""; // initialize string
+function rs485_readback()
+{
+    local byte = rs485.read();
+        // ignore initial input
+    if (byte == -1) return;
+    if (byte == 13)
+    {   // handle receipt of CR
+        // Output string and reset input_string for next set of chars
+        server.log("-Received 485: "+input_string_485);
+        input_string_485 = ""; // reset string
+    } else
+    {
+        // add input character to input_string buffer
+        input_string_485 = input_string_485 + chr(byte);
+    }
+}   // function rs485_readback()
+// receive individual characters from RS-232
+function chr(ascii_value)
+{
+    // convert passed integer value ASCII code
+    // into a character string
+    if (ascii_value < 32) return "";
+    return format("%c", ascii_value);
+} // function chr(ascii_value)
+
+function rs232_send(str)
+{
+    foreach(chr in str)
+    {
+      rs232.write(chr);
+    }
+    rs232.write(13);
+} // function rs232_send(str)
+
+function rs485_send(str)
+{
+    rs485_dir.write(rs485write);
+    foreach(chr in str)
+    {
+      rs485.write(chr);
+    }
+    rs485.write(13);
+    imp.sleep( (str.len() * 1.1) / 1000.0 );
+    rs485_dir.write(rs485read);
+} // function rs485_send(str)
+
+// Hardware set-up
+            // UART connection to RS-232 channel
+            // Pin 6 and Pin E are used for Write & Read
+            // readback function called for incoming bytes
+rs232.configure(9600, 8, PARITY_NONE, 1, NO_CTSRTS, rs232_readback);
+rs485.configure(9600, 8, PARITY_NONE, 1, NO_CTSRTS, rs485_readback);
+
+            // Pin 2 control direction of RS-485 Read or Write
+//        HW_ModBusDir.configure(DIGITAL_OUT);
+// rs485_dir.write(rs485read); // default to read
+const fmt1 = "Count: %d; Position: %5.3f; Mem Free: %d";
+bootCount <- 0; // count sweeps
+position <- 0; // current position
+
+function Sweep() 
+{
+    bootCount++; 
+    
+//    rs485_dir.write(rs485write);
+/*
+    foreach(chr in "rs485 string")
+    {
+        rs485.write(chr);
+    }
+    rs485.write(13);
+*/
+    rs485_send("TEST - rs485 boot count: "+bootCount);
+//     rs485_dir.write(rs485read);
+    
+  // write analog signal values
+  analog1out.write(position);
+  analog2out.write(1.0 - position);
+ // switch1out.write(position>0.5?1:0);
+  // write the servo position
+  SetServo(position);
+  if(position > 1.0) position = 0;
+  // increment the position
+  position = position + (1.0/STEPS);
+//  rs485.write(97);
+//  rs232.write(format("rs232 %d", bootCount));
+/*
+  foreach(chr in "rs232 string")
+  {
+      rs232.write(chr);
+  }
+  rs232.write(13);
+ */
+  rs232_send("TEST - rs232 boot count: "+bootCount);
+//  rs485_dir.write(rs485read);
+  server.log(format(fmt1, bootCount, position, imp.getmemoryfree()));
+  imp.wakeup(PERIOD, Sweep);
+} // function Sweep() 
+
+function SerialTest() // DUT
+{
+        bootCount++; 
+//    rs485_dir.write(rs485read);
+    rs485_send("DUT - rs485 boot count: "+bootCount);
+    
+    rs232_send("DUT - rs232 boot count: "+bootCount);
+//    server.log("--RS485: "+input_string_485+
+//                " RS232: "+input_string_232);
+//    rs485_dir.write(rs485read);
+    imp.wakeup(PERIOD, SerialTest);
+} // function SerialTest()
+
+if ( ID == "20000c2a69022926")
+{
+    Sweep();
+} else
+{
+    SerialTest()
+}
+
