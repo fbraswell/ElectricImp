@@ -12,7 +12,7 @@ const REGULATOR_OFF = 0x00;
 const REGULATOR_DELAY = 0.05; // wait for sensor to power up
 
 mode <- PUMP_MODE;
-mode <- TRANSDUCER_MODE;
+// mode <- TRANSDUCER_MODE;
 
 // ID 20000c2a69022926 is the Test Module
 ID <- hardware.getdeviceid();
@@ -94,7 +94,7 @@ const SERVO_MAX = 0.1235;
 const PERIOD = 4.0; // cycle period in sec
 
 // Steps run from 0 to 1.0
-const STEPS = 180;
+const STEPS = 10;
 
 // Below are channels for Test Module
 // create global variable for servo and configure
@@ -213,10 +213,10 @@ function getAnalog()
     h2 = hall2.read();
     
     // send info to log
-    server.log(format("++ Analog ch1: %d, %.2fV; Analog ch2: %d, %.2fV; temp2: %d, %.2fF, %.2fC; Hall2: %d", 
+    server.log(format("DUT ++ Analog ch1: %d, %.2fV; Analog ch2: %d, %.2fV; temp2: %d, %.2fF, %.2fC; Hall2: %d", 
                 ana1, ana1V, ana2, ana2V, tmp2, tempF, tempC, h2));
     // send info back to test module via RS232
-    rs232_send(format("++ Analog ch1: %d, %.2fV; Analog ch2: %d, %.2fV; temp2: %d, %.2fF, %.2fC; Hall2: %d", 
+    rs232_send(format("DUT ++ Analog ch1: %d, %.2fV; Analog ch2: %d, %.2fV; temp2: %d, %.2fF, %.2fC; Hall2: %d", 
                 ana1, ana1V, ana2, ana2V, tmp2, tempF, tempC, h2));
 //    server.log(format("+# Temp002 F: %5.2f; Temp C: %5.2f", tempF, tempC));
 //    rs232_send(format("+# Temp002 F: %5.2f; Temp C: %5.2f", tempF, tempC));
@@ -229,8 +229,8 @@ function getAnalog()
 //        local h1;
         local h1 = hall1.read();
         // send info to log for h2, pump mode
-        server.log(format("+= Pump Mode - Hall1: %d", h1));
-        rs232_send(format("+= Pump Mode - Hall1: %d", h1));
+        server.log(format("DUT += Pump Mode - Hall1: %d", h1));
+        rs232_send(format("DUT += Pump Mode - Hall1: %d", h1));
     } else
     {
 // Transducer only mode        
@@ -257,9 +257,9 @@ function getAnalog()
     
         local batV = ((hardware.voltage()/4096.0) * (bat/16.0)) * 4.59;
         // send info to log for transducer mode
-        server.log(format("+* Transducer Mode (no RS485) - Sw1: %d; SW2: %d; Temp1: %d, %.2fF, %.2fC; Battery: %d, %.2fV", 
+        server.log(format("DUT +* Transducer Mode (no RS485) - Sw1: %d; SW2: %d; Temp1: %d, %.2fF, %.2fC; Battery: %d, %.2fV", 
                             sw1, sw2, tmp1, tempF, tempC, bat, batV));
-        rs232_send(format("+* Transducer Mode (no RS485) - Sw1: %d; SW2: %d; Temp1: %d, %.2fF, %.2fC; Battery: %d, %.2fV", 
+        rs232_send(format("DUT +* Transducer Mode (no RS485) - Sw1: %d; SW2: %d; Temp1: %d, %.2fF, %.2fC; Battery: %d, %.2fV", 
                             sw1, sw2, tmp1, tempF, tempC, bat, batV));
         
 //        rs232_send(format("+* Transducer Mode - Sw1: %d; SW2: %d; Temp1: %d; Battery: %d", sw1, sw2, tmp1, bat));
@@ -281,7 +281,7 @@ function getAnalog()
             // Pin 2 control direction of RS-485 Read or Write
 //        HW_ModBusDir.configure(DIGITAL_OUT);
 // rs485_dir.write(rs485read); // default to read
-const fmt1 = "Count: %d; Position: %5.3f; Mem Free: %d";
+const fmt1 = "~~~~~~~~~~~~~ TEST BOX Count: %d; Position: %5.3f; Mem Free: %d ~~~~~~~~~~~~~ ";
 bootCount <- 0; // count sweeps
 position <- 0.0; // current position
 
@@ -297,7 +297,7 @@ function Sweep()
     }
     rs485.write(13);
 */
-    rs485_send("TEST - rs485 boot count: "+bootCount);
+    rs485_send("TEST BOX - rs485 boot count: "+bootCount);
 //     rs485_dir.write(rs485read);
     
   // write analog signal values
@@ -318,7 +318,7 @@ function Sweep()
   }
   rs232.write(13);
  */
-  rs232_send("TEST - rs232 boot count: "+bootCount);
+  rs232_send("TEST BOX - rs232 boot count: "+bootCount);
 //  rs485_dir.write(rs485read);
   server.log(format(fmt1, bootCount, position, imp.getmemoryfree()));
   imp.wakeup(PERIOD, Sweep);
@@ -327,6 +327,7 @@ function Sweep()
 function SerialTest() // DUT
 {
         bootCount++; 
+    server.log(format("~~~~~~~~~~~~~ DUT DEVICE UNDER TEST - Count: %d; Mem Free: %d ~~~~~~~~~~~~~ ", bootCount, imp.getmemoryfree()));
 //    rs485_dir.write(rs485read);
     rs485_send("DUT - rs485 boot count: "+bootCount);
     rs232_send("DUT - rs232 boot count: "+bootCount);
