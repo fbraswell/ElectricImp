@@ -38,6 +38,29 @@ const X_IMP_MODE = 6
 const X_IMP_ANALOG1_THRESHOLD = 7;
 const X_IMP_ANALOG1_RANGE = 8;
 
+// Imp Wake Codes
+
+impWakeCodes <-
+[
+//    Code    Description
+     "The power was turned on", // 0
+     "A software reset took place", // 1
+     "An event timer fired", // 2
+    "Pulse detected on Wakeup Pin", // 3
+    "New Squirrel code downloaded", // 4
+    "Squirrel runtime error", // 5
+    "impOS update", // 6
+    "A snooze-and-retry event", // 7
+        // imp003 only
+    "Hardware reset", // 8
+];
+const MODBUS = "modbus";
+device.on(MODBUS, function(data)
+{
+    
+} // end of function(data)
+); // end device.on(MODBUS)
+
 // Get meta data from the device, which includes the
 // impID and ssid information
 
@@ -45,13 +68,15 @@ const X_IMP_ANALOG1_RANGE = 8;
 //  meta key: devid val: 235c87eb6e4936ee
 device.on("metadata", function(data)
     {
-//        local makemeta = "";
+
         foreach (key, val in data)
         {
             server.log("meta key: "+key+" val: "+val);
         }
+
         // stash the imp ID for later use
-        IMP_DEV_ID <- data.devid;      
+        IMP_DEV_ID <- data.devid; 
+        IMP_SSID <- data.ssid;
         getXivelyFeedsTable();
     }
 );  // device.on("metadata", function(data)
@@ -75,6 +100,7 @@ device.on("tabledata",function(data)
             device.send("getImpInfo", obj);  // Request Information
             server.log("Request Imp dev id"); 
         });
+        return;
     } else
     {
         // Since device.onconnect stays active and executes with
@@ -88,11 +114,15 @@ device.on("tabledata",function(data)
     }    
         
         local makecsv = ""; // used to build csv file for Xively
+        local report_MB = ""; // for log report
+        local report_pvoltest = ""; // for log report
+        local report_data = "";  // for log report
         local keys = [ ];
         foreach (key, val in data)
         {
             keys.push(key);
         }
+        // sorting the keys makes the list easier to read
         keys.sort();
 //        server.log("++++++++keys length: "+keys.len());
 //        foreach (key, val in data)
@@ -100,6 +130,7 @@ device.on("tabledata",function(data)
         {
 //            server.log("+++++ key: "+key);
             local val = data[key];
+            // Catching keys longer than 9!!!!! They are the pvoltest time string
             if(key.len() > 9 && (key.find("MB") == null)) // time stamp string is longer than the other keys
             {
                     // build time string
@@ -110,15 +141,59 @@ device.on("tabledata",function(data)
 // debug               server.log("table key: "+key+", val: "+val+" - time diff: "+v+" time: "+tformat);
                     // build csv entry with name of chan, time, data value
                 makecsv += "pvolttest, "+tformat+", "+val+"\n";
+                    // list of pvoltest info
+                report_pvoltest += "pvolttest, "+tformat+", "+val+"\n";
             } else
             {
 // debug                server.log("table key: "+key+", val: "+val);
                     // build csv entry with name of chan, data value
                 makecsv += key+", "+val+"\n";
+                if (key.find("MB") != null)
+                {   // list of MB info
+                    report_MB += key+", "+val+"\n";
+                } else
+                {   // list of other data
+                    if (key.find("wakewhy") != null)
+                    {   // wakewhy is a numeric code 1 - 8
+                        // look up the string in the table
+                        val = val + ": " + impWakeCodes[val];
+                    }
+                    report_data += key+", "+val+"\n";
+                }
+            }
+        } // foreach (key in keys)
+        
+        // Report values to the log
+        if(report_pvoltest.len() != 0)
+        {
+            server.log("--***-- Voltage Channels --***--\n"+report_pvoltest);
+        }
+        if(report_MB.len() != 0)
+        {
+            server.log("--***-- Modbus Channels --***--\n"+report_MB);
+        }
+        if(report_data.len() != 0)
+        {
+            server.log("--***-- Data Channels --***--\n"+report_data);
+        }
+        server.log("--***-- End Channels --***--\n");
+/*        
+        local idx = 0; // default transducer mode
+        if(IMP_MODE == PUMP_MODE) // check for pump mode
+        {
+            if ((idx = makecsv.find("MB")) != null)
+            {
+                server.log("--***-- Voltages --***--\n"+makecsv.slice(0, idx-1));
+            } else
+            {
+                idx = 0; // didn't find "MB"; couldn't read Modbus
             }
         }
+        server.log("--***-- Data Channels --***--\n"+makecsv.slice(idx));
+        server.log("--***-- End Channels --***--\n");
+*/
             // DEBUG dump csv string
-        server.log("----****----Make CSV:\n"+makecsv);
+//        server.log("----****----Make CSV:\n"+makecsv);
             // send data to Xively feed
         dataToXively(makecsv);
     }
@@ -139,11 +214,12 @@ function dataToXively(csv)
                         };
   local request = http.put(XIVELY_API_ENDPOINT, extraHeaders, body);
                 
-    server.log("Xively Feed: "+XIVELY_FEED_NAME+
-                " ImpID: "+IMP_DEV_ID+
-                " pkg len: "+body.len()+
-                " sam per: "+IMP_SAMPLE_PER+
-                "s xmit per: "+IMP_XMIT_PER+"s "+
+    server.log("--> Xively Feed: "+XIVELY_FEED_NAME+
+                ", ImpID: "+IMP_DEV_ID+
+                ", Network: "+IMP_SSID);
+    server.log("--> Package lenth: "+body.len()+
+                ", sam per: "+IMP_SAMPLE_PER+
+                "s, xmit per: "+IMP_XMIT_PER+"s, "+
                 (IMP_MODE?"Pump Mode":"Transducer Mode") );
                 
 //  server.log("put request: "+request+" extra headers: "+extraHeaders);
@@ -191,8 +267,8 @@ function getXivelyFeedsTable()
 // incoming response's message and status code
 function getXivelyFeedsTableResponse(response) 
 {
-    server.log("Status Code Xively Feeds: " + response.statuscode + ", Message: " + 
-                (response.body==""?"none":response.body.slice(0,25)+"..."));
+//    server.log("Status Code Xively Feeds: " + response.statuscode + ", Message: " + 
+//                (response.body==""?"none":response.body.slice(0,25)+"..."));
                 
     // In the Special Xively Feed, under the description meta data field
     // there are a group of lines such as the following.
@@ -216,7 +292,13 @@ function getXivelyFeedsTableResponse(response)
         // match the line with the Imp DeviceID
         // define a regex to look for the dev ID at the beginning
         // of a line
-    local match = @"("+IMP_DEV_ID+@".*\n)"; // regex string defined
+//    local match = @"("+IMP_DEV_ID+@".*\n)"; // regex string defined
+        // Removed the \n and the expression started working again
+//    local match = @"("+IMP_DEV_ID+@".*)"; // regex string defined
+        // does not match \n correctly
+//    local match = "("+IMP_DEV_ID+@".*\n)"; // regex string defined
+    local match = "("+IMP_DEV_ID+@".*)"; // regex string defined
+    server.log("-- match string: "+match);
         // compile the regex
     local ex = regexp(match);
         // apply the regular expression
@@ -253,8 +335,11 @@ function getXivelyFeedsTableResponse(response)
 //    xivelyInfo[1] - Name of Xively Feed
 //    xivelyInfo[2] - Feed ID
 //    xivelyInfo[3] - API Key
+//    server.log("Imp-Xively Table Info: Imp ID: "+xivelyInfo[0]+" Feed Name: "+xivelyInfo[1]+
+//                " Feed ID: "+xivelyInfo[2]+" API key: "+xivelyInfo[3]);
+                
     server.log("Imp-Xively Table Info: Imp ID: "+xivelyInfo[0]+" Feed Name: "+xivelyInfo[1]+
-                " Feed ID: "+xivelyInfo[2]+" API key: "+xivelyInfo[3]);
+                " Feed ID: "+xivelyInfo[2]);
         
         // strip gets rid of whitespace at the beginning and end of the string - needed 
         // to get rid of new line
@@ -277,13 +362,14 @@ function getXivelyFeedsTableResponse(response)
         // We don't care if it fails because default values will be there
     }
 
-        // These should be either default values or set in the code above    
+        // These should be either default values or set in the code above  
+/*
     server.log("Imp samples period: "+IMP_SAMPLE_PER);
     server.log("Imp transmit period: "+IMP_XMIT_PER);
     server.log("Operating mode: "+(IMP_MODE?"Pump Mode":"Transducer Mode"));
     server.log("Analog1 threhold: "+IMP_ANALOG1_THRESHOLD);
     server.log("Analog1 range: "+IMP_ANALOG1_RANGE);
-    
+*/    
     local vars = { "IMP_SAMPLE_PER" : IMP_SAMPLE_PER,
                     "IMP_XMIT_PER" : IMP_XMIT_PER,
                     "IMP_MODE" : IMP_MODE,
@@ -318,7 +404,7 @@ function getXivelyFeedsTableResponse(response)
 // handle a trigger from Xively
 function requestHandler(request, response)
 {
-    server.log("++++++++++++++received Xively trigger++++++++++++++++");
+//    server.log("++++++++++++++received Xively trigger++++++++++++++++");
     // if it was, send the value of it to the device
     // device.send("cmd1 found: ", request.query["cmd1"]);
     local num = 9;
@@ -337,7 +423,7 @@ function requestHandler(request, response)
     // **** DEBUG ****//
     // If there is no connect/disconnect, use this    
         device.send("newsetpoint", num);
-    
+        server.log("+++++ Trigger Received - Quarts per day: "+num+" +++++");
         // in order to use device.send, the device must not
         // be asleep. If asleep, it never receives the send.
         // To make sure device is awake, use the device.onconnect
