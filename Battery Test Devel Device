@@ -4,7 +4,7 @@
 // When the Imp comes out of deep sleep, it starts here
 // log an ADC value each 10 sec, only tell the server each minute 
 t <- time();
-findMBaddr <- 1; // find MB address
+findMBaddr <- 0; // find MB address
 
 const MBwrite = 1;
 const MBread = 0;
@@ -32,10 +32,29 @@ const MB_WriteMultipleCoils = 15;
 const MB_WriteMultipleHoldingRegisters = 16;
 
 const MODBUS = "modbus";
-// Time Mark controller registers
-const MB_ADDR_TimeMark = 0x10;
-const MB_ADDR_PT500 = 0x01;
 
+// MB address for devices
+// if the addr is set to -1 later in the prog
+// it means that there is no response - the
+// device is not present
+ MB_ADDR_TimeMark <- 0x10;
+ MB_ADDR_PT500 <- 0x01;
+ MB_ADDR_MPX <- 0x01;
+ MB_ADDR_ICHEM <- 0x01;
+ 
+// Model for MPX is 5
+MB_MODEL_MPX <- 5;
+// Model for PT-500 is 9
+MB_MODEL_PT500 <- 9;
+ 
+ // Variables used to determine which
+ // Modbus devices are connected
+ MB_ADDR_TimeMark_Found <- 0;
+ MB_ADDR_PT500_Found <- 0;
+ MB_ADDR_MPX_Found <- 0;
+ MB_ADDR_ICHEM_Found <- 0;
+
+// Time Mark controller registers
 const MB_ONTIME = "MB_OnTime";
 const MB_OFFTIME = "MB_OffTime";
 const MB_TEMPSETPOINT = "MB_TempSetPoint";
@@ -47,6 +66,19 @@ const MB_PINPOSITION = "MB_PinPosition";
 const MB_MOTORSIZE = "MB_MotorSize";
 const MB_BATTERYVOLTAGE = "MB_BatteryVoltage";
 const MB_VERSIONNUMBER = "MB_VersionNumber";
+
+const PT500_MODEL = "PT500_model";
+const PT500_PRESSURE_H2O = "PT500_pressure_h2o";
+const PT500_TEMPC = "PT500_tempC";
+const PT500_CALC = "PT500_calc";
+const PT500_BATV = "PT500_batv";
+
+const MPX_MODEL = "MPX_model";
+const MPX_TOPDIST = "MPX_topdist";
+const MPX_BOTDIST = "MPX_botdist";
+const MPX_TEMPC = "MPX_tempC";
+const MPX_TOPCALC = "MPX_topcalc";
+const MPX_BOTCALC = "MPX_botcalc";
 
 // Voltage regulator control & constants
 const REGULATOR_ON = 0x01;
@@ -82,7 +114,6 @@ const METADATA = "metadata";
 const SSID = "ssid";
 const DEVID = "devid";
 const IMPTYPE = "imptype";
-
 
 // Imp002 pins
 HW_Temp002 <- hardware.pinA; // temp sensor voltage on pin2 and on IMP002 pinA
@@ -376,8 +407,8 @@ function MBreadInputRegisters(MBaddr, startAddr, endAddr)
     lbs = startAddr & 0x00ff;
     ube = endAddr >> 8;
     lbe = endAddr & 0x00ff;
-    server.log("Input upper st "+ubs+"; lower st "+lbs+
-                "; upper end "+ube+"; lower end "+lbe);
+//    server.log("Input upper st "+ubs+"; lower st "+lbs+
+//                "; upper end "+ube+"; lower end "+lbe);
     local MBcmd = [MBaddr, MB_ReadInputRegister
                     // Big Endian MSByte first
                     // assume for now, MSByte is 0
@@ -424,8 +455,11 @@ function logMB_TimeMark()
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
     if (a.len() > 0) 
-    {   // MB Data available in the array
-        
+    {   
+        MB_ADDR_TimeMark_Found++; // Found TM Modbus data
+        // MB Data available in the array
+        const TIME_MARK_JAN14 = "time_mark_jan14";
+        agent.send(TIME_MARK_JAN14, a); // Send raw data to Agent
 /*        foreach (key, val in a)
         {
             server.log("TM key: "+key+" val: "+val)
@@ -472,10 +506,13 @@ function logMB_TimeMark()
     } else 
     {   // no data in MB array
         server.log("Can't read Time Mark MODBUS registers!");
+        MB_ADDR_TimeMark_Found--; // Didn't find TM Modbus data
+//        MB_ADDR_TimeMark = -1;
     }
 } // function logMB_TimeMark() 
 //*************************************************
 
+// APG PT-500 Modbus Holding Registers Handler
 function logMB_APG() 
 {
 //    local d = date(); 
@@ -486,68 +523,148 @@ function logMB_APG()
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
     if (a.len() > 0) 
-    {   // MB Data available in the array
+    {   
+        MB_ADDR_PT500_Found++; // Found PT-500 Modbus data
+        // MB Data available in the array
         server.log("-- APG data array length: "+a.len());
 //        server.log(format("== APG Dev addr: %d; Units: %d; App type: %d; a[3]: %d", a[0], a[1], a[2], a[3]));   
-        foreach (key, val in a)
-        {
-            server.log("APG key: "+key+" val: "+val)
-        }
+        const MB_PT500_HREG = "MB_PT500_HREG";
+        agent.send(MB_PT500_HREG, a);
+//        foreach (key, val in a)
+//        {
+//            server.log("APG key: "+key+" val: "+val)
+//        }
         
-        if(0) // only report if batvolts ne 0
-        {
-
-        }
-        
-        // These values rarely change, if ever
-        // only report them at start-up time
-        if(nv.bootcount == 0)
-        {
-                // Send sensor parameters that never change
-            
-        }
     } else 
     {   // no data in APG MB array
         server.log("Can't read APG MODBUS registers!");
+        MB_ADDR_PT500_Found--; // Didn't find PT-500 Modbus data
     }
 } // function logMB_APG() 
 
+// APG PT-500 Modbus Input Registers Handler
 function logMB_APG_ireg() 
 {
 //    local d = date(); 
-
     // The a stands for all bytes but I didn't want to type it out so many times.
     local a = [ ];
-    a = MBreadInputRegisters(1, 298, 12);
+    a = MBreadInputRegisters(MB_ADDR_PT500, 298, 12);
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
-    if (a.len() > 0) 
-    {   // MB Data available in the array
-        server.log("-- APG ireg data array length: "+a.len());
-//        server.log(format("== APG Dev addr: %d; Units: %d; App type: %d; a[3]: %d", a[0], a[1], a[2], a[3]));   
-        foreach (key, val in a)
-        {
-            server.log("APG ireg key: "+key+" val: "+val)
-        }
+    if (a.len() > 5) 
+    {   
         
-        if(0) // only report if batvolts ne 0
+// Model for MPX is 5
+// MB_MODEL_MPX <- 5;
+// Model for PT-500 is 9
+// MB_MODEL_PT500 <- 9;
+        local model = (a[3] << 8) | a[4];
+        if (model == MB_MODEL_PT500)
         {
-
-        }
+            MB_ADDR_PT500_Found++; // Found PT-500 Modbus data
+            // MB Data available in the array
+//          server.log("-- APG ireg data array length: "+a.len());
+//          server.log(format("== APG Dev addr: %d; Units: %d; App type: %d; a[3]: %d", a[0], a[1], a[2], a[3]));   
+            const MB_PT500_IREG = "MB_PT500_IREG";
+            agent.send(MB_PT500_IREG, a);
+//           foreach (key, val in a)
+//          {
+ //            server.log("APG ireg key: "+key+" val: "+val)
+//          }
+/*                    
+PT500 <- 
+{
+    PT500_MODEL = -1, once
+    PT500_PRESSURE_H2O = -1, each time
+    PT500_TEMPC = -1, each time
+    PT500_CALC = -1, never
+    PT500_BATV = -1 once
+}                    
+*/
+            // These two are sent every time
+            nv.sensor[PT500_PRESSURE_H2O] <- (a[5] << 8) | a[6];
+            nv.sensor[PT500_TEMPC] <- (a[9] << 8) | a[10];
         
-        // These values rarely change, if ever
-        // only report them at start-up time
-        if(nv.bootcount == 0)
+            if(nv.bootcount == 0)
+            {
+                // send these only at power-up
+               nv.sensor[PT500_MODEL] <- (a[3] << 8) | a[4];
+                nv.sensor[PT500_BATV] <- (a[21] << 8) | a[22];
+                nv.sensor[PT500_CALC] <- (a[13] << 8) | a[14];
+            }
+        } else // if (model == MB_MODEL_PT500)
         {
-                // Send sensor parameters that never change
-            
+            server.log("Can't find APG ireg MODBUS registers! Model = "+model);
+            MB_ADDR_PT500_Found--; // Didn't find PT-500 Modbus data
         }
-    } else 
+    } else // if (a.len() > 0) 
     {   // no data in APG MB array
         server.log("Can't read APG ireg MODBUS registers!");
+        MB_ADDR_PT500_Found--; // Didn't find PT-500 Modbus data
     }
 } // function logMB_APG_ireg() 
 
+// APG MPX Magnetostrictive Modbus Input Registers Handler
+function logMB_MPX_ireg() 
+{
+//    local d = date(); 
+    // The a stands for all bytes but I didn't want to type it out so many times.
+    local a = [ ];
+    a = MBreadInputRegisters(MB_ADDR_MPX, 298, 8);
+    
+    // Some of these are supposed to be unsigned.  Are those being read correctly?
+    if (a.len() > 0) 
+    {   
+// Model for MPX is 5
+// MB_MODEL_MPX <- 5;
+// Model for PT-500 is 9
+// MB_MODEL_PT500 <- 9;
+        local model = (a[3] << 8) | a[4];
+        if (model == MB_MODEL_MPX)
+        {
+            MB_ADDR_MPX_Found++; // Found PT-500 Modbus data
+            // MB Data available in the array
+//            server.log("-- MPX ireg data array length: "+a.len());
+            const MB_MPX_IREG = "MB_MPX_IREG";
+            agent.send(MB_MPX_IREG, a);
+//          foreach (key, val in a)
+//          {
+ //             server.log("MPX ireg key: "+key+" val: "+val)
+//          }
+
+/*
+const MPX_MODEL = "MPX_model"; one time
+const MPX_TOPDIST = "MPX_topdist"; each time
+const MPX_BOTDIST = "MPX_botdist"; each time
+const MPX_TEMPC = "MPX_tempC"; each time
+const MPX_TOPCALC = "MPX_topcalc"; one time
+const MPX_BOTCALC = "MPX_botcalc"; one time
+*/
+            // These two are sent every time
+            nv.sensor[MPX_TOPDIST] <- (a[5] << 8) | a[6];
+            nv.sensor[MPX_BOTDIST] <- (a[7] << 8) | a[8];
+            nv.sensor[MPX_TEMPC] <- (a[9] << 8) | a[10];
+        
+            if(nv.bootcount == 0)
+            {
+                    // send these only at power-up
+                nv.sensor[MPX_MODEL] <- (a[3] << 8) | a[4];
+                nv.sensor[MPX_TOPCALC] <- (a[11] << 8) | (a[12] << 8) | (a[13] << 8) | a[14];
+                nv.sensor[MPX_BOTCALC] <- (a[15] << 8) | (a[16] << 8) | (a[17] << 8) | a[18];
+            } // if(nv.bootcount == 0)
+        } else // if (model == MB_MODEL_MPX)
+        {
+            server.log("Can't find  MPX ireg MODBUS registers! Model = "+model);
+            MB_ADDR_MPX_Found--; // Didn't find PT-500 Modbus data
+        }
+    } else // if (a.len() > 0) 
+    {   // no data in APG MB array
+        server.log("Can't read MPX ireg MODBUS registers!");
+        MB_ADDR_MPX_Found--; // Didn't find PT-500 Modbus data
+    }
+} // function logMB_MPX_ireg() 
+
+// ICHEM Modbus Handler - Holding Registers
 function logMB_ICHEM() 
 {
 //    local d = date(); 
@@ -558,7 +675,9 @@ function logMB_ICHEM()
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
     if (a.len() > 0) 
-    {   // MB Data available in the array
+    {   
+        MB_ADDR_ICHEM_Found++; // Found ICHEM Modbus Data
+        // MB Data available in the array
         server.log("-- ICHEM data array length: "+a.len());
 //        server.log(format("== APG Dev addr: %d; Units: %d; App type: %d; a[3]: %d", a[0], a[1], a[2], a[3]));   
         foreach (key, val in a)
@@ -566,24 +685,15 @@ function logMB_ICHEM()
             server.log("ICHEM key: "+key+" val: "+val)
         }
         
-        if(0) // only report if batvolts ne 0
-        {
-
-        }
-        
-        // These values rarely change, if ever
-        // only report them at start-up time
-        if(nv.bootcount == 0)
-        {
-                // Send sensor parameters that never change
-            
-        }
     } else 
     {   // no data in APG MB array
         server.log("Can't read ICHEM MODBUS registers!");
+        MB_ADDR_ICHEM_Found--; // Didn't find ICHEM Modbus Data
     }
 } // function logMB_ICHEM() 
 
+// Try to locate Modbus devices by cycling through addresses
+// and looking for a response
 function findMB() 
 {
 //    local d = date(); 
@@ -862,11 +972,46 @@ function dispatch()
         {
           findMB();  
         }
-        logMB_TimeMark(); // sample MB registers
-        logMB_APG();
+
+// MB_ADDR_TimeMark <- 0x10;
+// MB_ADDR_PT500 <- 0x01;
+// MB_ADDR_MPX <- 0x01;
+// MB_ADDR_ICHEM <- 0x01;
+
+ // MB_ADDR_TimeMark_Found <- 0;
+ // MB_ADDR_PT500_Found <- 0;
+ // MB_ADDR_MPX_Found <- 0;
+ // MB_ADDR_ICHEM_Found <- 0;
+ 
+        server.log(format("** TimeMark: %d; PT-500: %d; MPX: %d; ICHEM: %d", 
+                      MB_ADDR_TimeMark_Found, MB_ADDR_PT500_Found
+                      MB_ADDR_MPX_Found, MB_ADDR_ICHEM_Found))
+ 
+        // Give the Modbus test several tries before
+        // shutting it off
+        if (MB_ADDR_TimeMark_Found >= -5)
+        {
+            logMB_TimeMark(); // sample MB registers
+        }
+//        logMB_APG();
         imp.sleep( 0.5 );
-        logMB_APG_ireg();
-        logMB_ICHEM();
+        
+        if (MB_ADDR_PT500_Found >= -5)
+        {
+            logMB_APG_ireg();
+        }
+        imp.sleep( 0.5 );
+        
+        if(MB_ADDR_MPX_Found >= -5)
+        {
+            logMB_MPX_ireg();
+        }
+//        logMB_ICHEM();
+        if(MB_ADDR_ICHEM_Found >= -5)
+        {
+//            logMB_ICHEM();
+        }
+
         logpressure(); 
     } else if (nv.PUMP == TRANSDUCER_MODE)
     {
