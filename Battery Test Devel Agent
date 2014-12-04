@@ -75,7 +75,25 @@ MPX <-
 const ICHEM_ = "ichem";
 ICHEM <-
 {
-    ICHEM = -1,
+    ICHEM_month = -1, // 40002 int
+    ICHEM_day = -1, // 40003 int
+    ICHEM_year = -1, // 40004 int
+    ICHEM_hour = -1, // 40005 int
+    ICHEM_min = -1, // 40006 int
+    ICHEM_sec = -1, // 40007 int
+    
+    ICHEM_daily_volume = -1, // 40100 float
+    ICHEM_daily_cycles = -1, // 40102 float
+    ICHEM_injection_rate = -1, // 40104 float
+    ICHEM_accum_cycle_vol = -1, // 40106 float
+    ICHEM_accum_daily_vol = -1, // 40108 float
+    ICHEM_curr_tank_lev = -1, // 40110 float
+    ICHEM_fm_k_factor = -1, // 40112 float
+    ICHEM_yesterday_volume = -1, // 40114 float
+    ICHEM_week_volume = -1, // 40116 float
+    ICHEM_month_volume = -1, // 40118 float
+    ICHEM_year_volume = -1, // 40120 float
+    ICHEM_forever_volume = -1, // 40122 float
 }
 
 // Defaults
@@ -149,6 +167,47 @@ const MB_BATTERYVOLTAGE = "MB_BatteryVoltage";
 const MB_VERSIONNUMBER = "MB_VersionNumber";
 */
 
+// extracct 16 bit int register from 
+// modbus array
+function MB_toint16(register, offset, a)
+{
+  // the first three locations of the modbus
+  // array are used for comm data
+  // a[0] = MB address
+  // a[1] = MB command
+  // a[2] = MB length of data
+  // The registers start at location 3
+  // The register at loc 3 may be offset from 0
+  // in the block of data
+    // The array is made up of pairs, representing
+    // 8 bit values from the MB read
+    // Shift the first upper byte value by 8 and OR it with
+    // the adjacent lower byte to get the
+    // 16 bit int
+    // two regs per word offset by 3 locations
+    // and back by 2 because index origin is 1, not 0
+    local aloc = ((register - offset) * 2) + 3 - 2; 
+  return (a[aloc] << 8) | a[aloc + 1];
+} // function MB_toint16(register, offset, a)
+
+function MB_toint32(register, offset, a)
+{
+    // MB_toint32 is similar to MB_toint16, except
+    // we put together 4 registers
+    local aloc = ((register - offset) * 2) + 3 - 2; 
+    return (a[aloc] << 24) | (a[aloc + 1] << 16) 
+            | (a[aloc + 2] << 8) | a[aloc + 3];
+} // function MB_toint32(register, offset, a)
+
+function MB_tofloat32(register, offset, a)
+{
+    // MB_tofloat32 is similar to MB_toint32, except
+    // we put together 4 registers and cast to float
+    local aloc = ((register - offset) * 2) + 3 - 2; 
+    return casti2f((a[aloc] << 24) | (a[aloc + 1] << 16) 
+            | (a[aloc + 2] << 8) | a[aloc + 3]);
+} // function MB_tofloat32(register, offset, a)
+
 const TIME_MARK_JAN14 = "time_mark_jan14";
 device.on(TIME_MARK_JAN14, function(a)
 {
@@ -156,11 +215,29 @@ device.on(TIME_MARK_JAN14, function(a)
 //        {
 //            server.log("Time Mark key: "+key+" val: "+val)
 //        }
-        
-    TimeMark.MB_OnTime <- (a[3] << 8) | a[4];
-    TimeMark.MB_OffTime <- (a[5] << 8) | a[6]; 
-    TimeMark.MB_TempSetPoint <- (a[7] << 8) | a[8];
-    
+
+    // version number for Jan 14, 2014 = 140127
+    TimeMark.MB_VersionNumber <- MB_toint32(14, 0, a);
+    if(TimeMark.MB_VersionNumber == 140127)
+    {
+        // This is older version
+        server.log("--* Found version 140127!");
+    }
+//    TimeMark.MB_OnTime <- (a[3] << 8) | a[4];
+    TimeMark.MB_OnTime <- MB_toint16(1, 0, a);
+//    TimeMark.MB_OffTime <- (a[5] << 8) | a[6];
+    TimeMark.MB_OffTime <- MB_toint16(2, 0, a);
+//    TimeMark.MB_TempSetPoint <- (a[7] << 8) | a[8];
+    TimeMark.MB_TempSetPoint <- MB_toint16(3, 0, a);
+/*    local tmp = MB_toint16(3, 0, a);
+    if (tmp == TimeMark.MB_TempSetPoint)
+    {
+        server.log("### TempSetPoint Matched: "+tmp);
+    } else
+    {
+        server.log("###! No Match -  TempSetPoint: "+TimeMark.MB_TempSetPoint
+                    +" tmp: "+tmp);
+    }
     // Convert the quarts per day from binary to a float
         local qpd = blob(4);
         qpd.writen(a[12], 'b');
@@ -172,14 +249,44 @@ device.on(TIME_MARK_JAN14, function(a)
     
  //   TimeMark.MB_QUARTSPERDAY <- quartsPerDay;
     TimeMark.MB_QuartsPerDay <- quartsPerDay;
-    TimeMark.MB_Cycles <- (a[13] << 24) | (a[14] << 16) | (a[15] << 8) | a[16];
-    TimeMark.MB_Temperature <- (a[17] << 8) | a[18];
-    TimeMark.MB_PlungerSize <- (a[19] << 8) | a[20];
-    TimeMark.MB_PinPosition <- (a[21] << 8) | a[22];
-    TimeMark.MB_MotorSize <- (a[23] << 8) | a[24];
-    TimeMark.MB_BatteryVoltage <- casti2f((a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28]); // not working
-    TimeMark.MB_VersionNumber <- (a[29] << 24) | (a[30] << 16) | (a[31] << 8) | a[32];
     
+    tmp = MB_tofloat32(4, 0, a);
+    
+    if (tmp == TimeMark.MB_QuartsPerDay)
+    {
+        server.log("### Quarts per day Matched: "+tmp);
+    } else
+    {
+        server.log("###! No Match -  Quarts per day: "+TimeMark.MB_QuartsPerDay
+                    +" tmp: "+tmp);
+    }
+*/
+    TimeMark.MB_QuartsPerDay <- MB_tofloat32(4, 0, a);
+ //   TimeMark.MB_Cycles <- (a[13] << 24) | (a[14] << 16) | (a[15] << 8) | a[16];
+    TimeMark.MB_Cycles <- MB_toint32(6, 0, a);
+//    TimeMark.MB_Temperature <- (a[17] << 8) | a[18];
+    TimeMark.MB_Temperature <- MB_toint16(8, 0, a);
+ //   TimeMark.MB_PlungerSize <- (a[19] << 8) | a[20];
+    TimeMark.MB_PlungerSize <- MB_toint16(9, 0, a);
+//    TimeMark.MB_PinPosition <- (a[21] << 8) | a[22];
+    TimeMark.MB_PinPosition <- MB_toint16(10, 0, a);
+//    TimeMark.MB_MotorSize <- (a[23] << 8) | a[24];
+    TimeMark.MB_MotorSize <- MB_toint16(11, 0, a);
+//    TimeMark.MB_BatteryVoltage <- casti2f((a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28]); // not working
+    TimeMark.MB_BatteryVoltage <- MB_tofloat32(12, 0, a);
+/*    TimeMark.MB_VersionNumber <- (a[29] << 24) | (a[30] << 16) | (a[31] << 8) | a[32];
+    
+    tmp = MB_toint32(14, 0 , a);
+    if(tmp == TimeMark.MB_VersionNumber)
+    {
+        server.log("### Version Matched: "+tmp);
+    } else
+    {
+        server.log("###! No Match - MB_VersionNumber: "+TimeMark.MB_VersionNumber
+                +"tmp: "+tmp);
+    }
+*/
+//    TimeMark.MB_VersionNumber <- MB_toint32(14, 0, a);
 //    foreach (key, val in TimeMark)
 //        {
 //            server.log("Time Mark key: "+key+" val: "+val)
@@ -206,11 +313,16 @@ device.on(MB_PT500_IREG, function(data)
 //            server.log("APG PT-500 ireg key: "+key+" val: "+val)
 //        }
     // Decode registers
-    PT500.PT500_model <- (data[3] << 8) | data[4];
-    PT500.PT500_pressure_h2o <- (data[5] << 8) | data[6];
-    PT500.PT500_tempC <- (data[9] << 8) | data[10];
-    PT500.PT500_calc <- (data[13] << 8) | data[14];
-    PT500.PT500_batv <- (data[21] << 8) | data[22];
+//    PT500.PT500_model <- (data[3] << 8) | data[4];
+    PT500.PT500_model <- MB_toint16(299, 298, data);
+//    PT500.PT500_pressure_h2o <- (data[5] << 8) | data[6];
+    PT500.PT500_pressure_h2o <- MB_toint16(300, 298, data);
+ //   PT500.PT500_tempC <- (data[9] << 8) | data[10];
+    PT500.PT500_tempC <- MB_toint16(302, 298, data);
+ //   PT500.PT500_calc <- (data[13] << 8) | data[14];
+    PT500.PT500_calc <- MB_toint16(304, 298, data);
+//    PT500.PT500_batv <- (data[21] << 8) | data[22];
+    PT500.PT500_batv <- MB_toint16(308, 298, data);
 //    foreach (key, val in PT500)
 //    {
 //        server.log("APG PT-500: "+key+": "+val);
@@ -227,12 +339,18 @@ device.on(MB_MPX_IREG, function(data)
 //            server.log("APG MPX ireg key: "+key+" val: "+val)
 //        }
     // Decode registers
-    MPX.MPX_model <- (data[3] << 8) | data[4];
-    MPX.MPX_topdist <- (data[5] << 8) | data[6];
-    MPX.MPX_botdist <- (data[7] << 8) | data[8];
-    MPX.MPX_tempC <- (data[9] << 8) | data[10];
-    MPX.MPX_topcalc <- (data[11] << 24) | (data[12] << 16) | (data[13] << 8) | data[14];
-    MPX.MPX_botcalc <- (data[15] << 24) | (data[16] << 16) | (data[17] << 8) | data[18];
+//    MPX.MPX_model <- (data[3] << 8) | data[4];
+    MPX.MPX_model <- MB_toint16(299, 298, data);
+//    MPX.MPX_topdist <- (data[5] << 8) | data[6];
+    MPX.MPX_topdist <- MB_toint16(300, 298, data);
+//    MPX.MPX_botdist <- (data[7] << 8) | data[8];
+    MPX.MPX_botdist <- MB_toint16(301, 298, data);
+//    MPX.MPX_tempC <- (data[9] << 8) | data[10];
+    MPX.MPX_tempC <- MB_toint16(302, 298, data);
+ //   MPX.MPX_topcalc <- (data[11] << 24) | (data[12] << 16) | (data[13] << 8) | data[14];
+    MPX.MPX_topcalc <- MB_toint32(303, 298, data);
+ //   MPX.MPX_botcalc <- (data[15] << 24) | (data[16] << 16) | (data[17] << 8) | data[18];
+    MPX.MPX_botcalc <- MB_toint32(305, 298, data);
 //    foreach (key, val in PT500)
 //    {
 //        server.log("APG MPX: "+key+": "+val);
@@ -240,6 +358,34 @@ device.on(MB_MPX_IREG, function(data)
     
 } // end of function(data)
 ); // end device.on(MB_MPX_IREG, function(data)
+
+
+const ICHEM_HREG = "iChem_hreg";
+device.on(ICHEM_HREG, function(data)
+{
+    
+    ICHEM.ICHEM_month <- (data[7] << 8) | data[8]; // 40002 int
+    ICHEM.ICHEM_day <- (data[9] << 8) | data[10]; // 40003 int
+    ICHEM.ICHEM_year <- (data[11] << 8) | data[12]; // 40004 int
+    ICHEM.ICHEM_hour <- (data[13] << 8) | data[14]; // 40005 int
+    ICHEM.ICHEM_min<- (data[15] << 8) | data[16]; // 40006 int
+    ICHEM.ICHEM_sec <- (data[17] << 8) | data[18]; // 40007 int
+/*    
+    ICHEM.ICHEM_daily_volume <- (data[19] << 8) | data[20]; // 40100 float
+    ICHEM.ICHEM_daily_cycles <- (data[3] << 8) | data[4]; // 40102 float
+    ICHEM.ICHEM_injection_rate <- (data[3] << 8) | data[4]; // 40104 float
+    ICHEM.ICHEM_accum_cycle_vol <- (data[3] << 8) | data[4]; // 40106 float
+    ICHEM.ICHEM_accum_daily_vol <- (data[3] << 8) | data[4]; // 40108 float
+    ICHEM.ICHEM_curr_tank_lev <- (data[3] << 8) | data[4]; // 40110 float
+    ICHEM.ICHEM_fm_k_factor <- (data[3] << 8) | data[4]; // 40112 float
+    ICHEM.ICHEM_yesterday_volume <- (data[3] << 8) | data[4]; // 40114 float
+    ICHEM.ICHEM_week_volume <- (data[3] << 8) | data[4]; // 40116 float
+    ICHEM.ICHEM_month_volume <- (data[3] << 8) | data[4]; // 40118 float
+    ICHEM.ICHEM_year_volume <- (data[3] << 8) | data[4]; // 40120 float
+    ICHEM.ICHEM_forever_volume <- (data[3] << 8) | data[4]; // 40122 float
+*/    
+} // end of function(data)
+); // end device.on(ICHEM_HREG, function(data)
 
 // Get meta data from the device, which includes the
 // impID and ssid information
@@ -298,6 +444,7 @@ device.on("tabledata",function(data)
         local report_MB_agent = ""; // MB info decoded by agent
         local report_PT500_agent = ""; // PT500 info decoded by agent
         local report_MPX_agent = ""; // MPX info decoded by agent
+        local report_ICHEM_agent = ""; // ICHEM info decoded by agent
         local report_pvoltest = ""; // for log report
         local report_data = "";  // for log report
         local keys = [ ];
@@ -341,7 +488,8 @@ device.on("tabledata",function(data)
                 // Locate Modbus data
                 if (key.find("MB") != null ||
                     key.find("PT500") != null ||
-                    key.find("MPX") != null)
+                    key.find("MPX") != null ||
+                    key.find("ICHEM") != null)
                 {   
                     
                     // list of MB info
@@ -413,6 +561,51 @@ MPX <-
                             report_MPX_agent += key+", "+MPX[key]+"\n";
                         }
                     } // key.find("MPX") != null 
+
+/*
+ICHEM <-
+{
+    ICHEM_month = -1, // 40002 int
+    ICHEM_day = -1, // 40003 int
+    ICHEM_year = -1, // 40004 int
+    ICHEM_hour = -1, // 40005 int
+    ICHEM_min = -1, // 40006 int
+    ICHEM_sec = -1, // 40007 int
+    
+    ICHEM_daily_volume = -1, // 40100 float
+    ICHEM_daily_cycles = -1, // 40102 float
+    ICHEM_injection_rate = -1, // 40104 float
+    ICHEM_accum_cycle_vol = -1, // 40106 float
+    ICHEM_accum_daily_vol = -1, // 40108 float
+    ICHEM_curr_tank_lev = -1, // 40110 float
+    ICHEM_fm_k_factor = -1, // 40112 float
+    ICHEM_yesterday_volume = -1, // 40114 float
+    ICHEM_week_volume = -1, // 40116 float
+    ICHEM_month_volume = -1, // 40118 float
+    ICHEM_year_volume = -1, // 40120 float
+    ICHEM_forever_volume = -1, // 40122 float
+}
+*/
+                    // Put info into report_MPX_agent
+                    if(key.find("ICHEM") != null)
+                    {
+                        if ( bootcount != 0 // &&
+                            // (key == "MPX_topdist" ||
+                            //key == "MPX_botdist" ||
+                            // key == "MPX_tempC")
+                            )
+                        {
+                            report_ICHEM_agent += key+", "+ICHEM[key]+"\n";
+                        } else
+                        {
+                        // save all if bootcount == 0
+                            report_ICHEM_agent += key+", "+ICHEM[key]+"\n";
+                        }
+                    } // key.find("ICHEM") != null 
+
+
+
+
                     
                 } else
                 {   // list of other data
@@ -424,8 +617,10 @@ MPX <-
                     }
                     report_data += key+", "+val+"\n";
                 }
-            }
+            } // if(key.len() > 9 && (key.find("MB") == null ...
         } // foreach (key in keys)
+
+
         
         // Report values to the log
         if(report_pvoltest.len() != 0)
@@ -443,6 +638,14 @@ MPX <-
         if(report_PT500_agent.len() != 0)
         {
             server.log("--***-- Agent PT500 Channels --***--\n"+report_PT500_agent);
+        }
+        if(report_MPX_agent.len() != 0)
+        {
+            server.log("--***-- Agent MPX Channels --***--\n"+report_MPX_agent);
+        }
+        if(report_ICHEM_agent.len() != 0)
+        {
+            server.log("--***-- Agent ICHEM Channels --***--\n"+report_ICHEM_agent);
         }
         if(report_data.len() != 0)
         {
