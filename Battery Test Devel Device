@@ -142,6 +142,23 @@ HW_Analog1In <- hardware.pin7; // Analog channel 1
     // Switch tells us if above the trigger or below
 // Analog1Volts_switch <- 0; // switch starts at off
 
+impErrorCodes <-
+[
+    // Description Code
+    "no code 0", // code 0
+    "Illegal Function code 1", // code 1
+    "Illegal Data Value code 2", // code 2
+    "Illegal Data Value code 3", // code 3
+    "Slave Device Failure code 4", // code 4
+    "no code 5", // code 5
+    "Slave Device Busy code 6", // code 6
+    "no code 7", // code 7
+    "no code 8", // code 8
+    "no code 9", // code 9
+    "Gateway Path Unavailable code 10", // code 10
+    "Gateway Target Device Failed to Respond code 11" // code 11
+];
+
 /*
 Imp Wake Codes
 Code    Description
@@ -454,7 +471,7 @@ function logMB_TimeMark()
     a = MBreadHoldingRegisters(MB_ADDR_TimeMark, 0, 15);
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
-    if (a.len() > 0) 
+    if (a.len() > 8) 
     {   
         MB_ADDR_TimeMark_Found++; // Found TM Modbus data
         // MB Data available in the array
@@ -522,7 +539,7 @@ function logMB_APG()
     a = MBreadHoldingRegisters(1, 400, 20);
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
-    if (a.len() > 0) 
+    if (a.len() > 8) 
     {   
         MB_ADDR_PT500_Found++; // Found PT-500 Modbus data
         // MB Data available in the array
@@ -551,7 +568,7 @@ function logMB_APG_ireg()
     a = MBreadInputRegisters(MB_ADDR_PT500, 298, 12);
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
-    if (a.len() > 5) 
+    if (a.len() > 8) 
     {   
         
 // Model for MPX is 5
@@ -613,7 +630,7 @@ function logMB_MPX_ireg()
     a = MBreadInputRegisters(MB_ADDR_MPX, 298, 8);
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
-    if (a.len() > 0) 
+    if (a.len() > 8) 
     {   
 // Model for MPX is 5
 // MB_MODEL_MPX <- 5;
@@ -671,12 +688,16 @@ function logMB_ICHEM()
 
     // The a stands for all bytes but I didn't want to type it out so many times.
     local a = [ ];
-    a = MBreadHoldingRegisters(1, 0, 20);
+    a = MBreadHoldingRegisters(MB_ADDR_ICHEM, 0, 20);
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
-    if (a.len() > 0) 
+    if (a.len() > 8) 
     {   
         MB_ADDR_ICHEM_Found++; // Found ICHEM Modbus Data
+        
+        const ICHEM_HREG = "iChem_hreg";
+        agent.send(ICHEM_HREG, a); // Send raw data to Agent
+        
         // MB Data available in the array
         server.log("-- ICHEM data array length: "+a.len());
 //        server.log(format("== APG Dev addr: %d; Units: %d; App type: %d; a[3]: %d", a[0], a[1], a[2], a[3]));   
@@ -706,7 +727,7 @@ function findMB()
         a = MBreadHoldingRegisters(addr, 0, 20);
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
-    if (a.len() > 0) 
+    if (a.len() > 8) 
     {   // MB Data available in the array
         server.log("-- MB data array length: "+a.len());
 //        server.log(format("== APG Dev addr: %d; Units: %d; App type: %d; a[3]: %d", a[0], a[1], a[2], a[3]));   
@@ -1009,7 +1030,7 @@ function dispatch()
 //        logMB_ICHEM();
         if(MB_ADDR_ICHEM_Found >= -5)
         {
-//            logMB_ICHEM();
+            logMB_ICHEM();
         }
 
         logpressure(); 
