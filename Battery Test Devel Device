@@ -40,7 +40,7 @@ const MODBUS = "modbus";
  MB_ADDR_TimeMark <- 0x10;
  MB_ADDR_PT500 <- 0x01;
  MB_ADDR_MPX <- 0x01;
- MB_ADDR_ICHEM <- 0x01;
+ MB_ADDR_ICHEM <- 0x02;
  
 // Model for MPX is 5
 MB_MODEL_MPX <- 5;
@@ -67,6 +67,13 @@ const MB_MOTORSIZE = "MB_MotorSize";
 const MB_BATTERYVOLTAGE = "MB_BatteryVoltage";
 const MB_VERSIONNUMBER = "MB_VersionNumber";
 
+const TM_ONSEC = "TM_onsec";
+const TM_ONMIN = "TM_onmin";
+const TM_ONHR = "TM_onhr";
+const TM_OFFSEC = "TM_offsec";
+const TM_OFFMIN = "TM_offmin";
+const TM_OFFHR = "TM_offhr";
+
 const PT500_MODEL = "PT500_model";
 const PT500_PRESSURE_H2O = "PT500_pressure_h2o";
 const PT500_TEMPC = "PT500_tempC";
@@ -79,6 +86,13 @@ const MPX_BOTDIST = "MPX_botdist";
 const MPX_TEMPC = "MPX_tempC";
 const MPX_TOPCALC = "MPX_topcalc";
 const MPX_BOTCALC = "MPX_botcalc";
+
+const ICHEM_MONTH = "ICHEM_month";
+const ICHEM_DAY = "ICHEM_day";
+const ICHEM_YEAR = "ICHEM_year";
+const ICHEM_HOUR = "ICHEM_hour";
+const ICHEM_MIN = "ICHEM_min";
+const ICHEM_SEC = "ICHEM_sec";
 
 // Voltage regulator control & constants
 const REGULATOR_ON = 0x01;
@@ -481,9 +495,12 @@ function logMB_TimeMark()
         {
             server.log("TM key: "+key+" val: "+val)
         }
-*/        
+*/      local tmversion = (a[29] << 24) | (a[30] << 16) | (a[31] << 8) | a[32];
         local onTime = (a[3] << 8) | a[4];
         local offTime = (a[5] << 8) | a[6]; 
+        
+        if(tmversion == 140127)
+        {
         
         // Convert the quarts per day from binary to a float
         local qpd = blob(4);
@@ -519,6 +536,24 @@ function logMB_TimeMark()
             nv.sensor[MB_PLUNGERSIZE] <- (a[19] << 8) | a[20];
             nv.sensor[MB_PINPOSITION] <- (a[21] << 8) | a[22];
             nv.sensor[MB_MOTORSIZE] <- (a[23] << 8) | a[24]
+        }
+        } else
+        {
+            // Time Mark new controller
+/*            
+const TM_ONSEC = "TM_onsec";
+const TM_ONMIN = "TM_onmin";
+const TM_ONHR = "TM_onhr";
+const TM_OFFSEC = "TM_offsec";
+const TM_OFFMIN = "TM_offmin";
+const TM_OFFHR = "TM_offhr";
+*/
+            nv.sensor[TM_ONSEC] <- -3;
+            nv.sensor[TM_ONMIN] <- -3;
+            nv.sensor[TM_ONHR] <- -3;
+            nv.sensor[TM_OFFSEC] <- -3;
+            nv.sensor[TM_OFFMIN] <- -3;
+            nv.sensor[TM_OFFHR] <- -3;
         }
     } else 
     {   // no data in MB array
@@ -688,7 +723,7 @@ function logMB_ICHEM()
 
     // The a stands for all bytes but I didn't want to type it out so many times.
     local a = [ ];
-    a = MBreadHoldingRegisters(MB_ADDR_ICHEM, 0, 20);
+    a = MBreadHoldingRegisters(MB_ADDR_ICHEM, 0, 40);
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
     if (a.len() > 8) 
@@ -701,10 +736,24 @@ function logMB_ICHEM()
         // MB Data available in the array
         server.log("-- ICHEM data array length: "+a.len());
 //        server.log(format("== APG Dev addr: %d; Units: %d; App type: %d; a[3]: %d", a[0], a[1], a[2], a[3]));   
-        foreach (key, val in a)
-        {
-            server.log("ICHEM key: "+key+" val: "+val)
-        }
+//        foreach (key, val in a)
+//        {
+//            server.log("device ICHEM key: "+key+" val: "+val)
+//        }
+/*
+const ICHEM_MONTH = "ICHEM_month";
+const ICHEM_DAY = "ICHEM_day";
+const ICHEM_YEAR = "ICHEM_year";
+const ICHEM_HOUR = "ICHEM_hour";
+const ICHEM_MIN = "ICHEM_min";
+const ICHEM_SEC = "ICHEM_sec";
+*/
+        nv.sensor[ICHEM_MONTH] <- -2;
+        nv.sensor[ICHEM_DAY] <- -2;
+        nv.sensor[ICHEM_YEAR] <- -2;
+        nv.sensor[ICHEM_HOUR] <- -2;
+        nv.sensor[ICHEM_MIN] <- -2;
+        nv.sensor[ICHEM_SEC] <- -2;
         
     } else 
     {   // no data in APG MB array
