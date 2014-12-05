@@ -25,8 +25,16 @@ const MB_MOTORSIZE = "MB_MotorSize";
 const MB_BATTERYVOLTAGE = "MB_BatteryVoltage";
 const MB_VERSIONNUMBER = "MB_VersionNumber";
 
+const TM_ONSEC = "TM_onsec";
+const TM_ONMIN = "TM_onmin";
+const TM_ONHR = "TM_onhr";
+const TM_OFFSEC = "TM_offsec";
+const TM_OFFMIN = "TM_offmin";
+const TM_OFFHR = "TM_offhr";
+
 TimeMark <- 
 {
+    // Time Mark Jan 27, 2014 release
     MB_OnTime = -1,
     MB_OffTime = -1,
     MB_TempSetPoint = -1,
@@ -37,7 +45,44 @@ TimeMark <-
     MB_PinPosition = -1,
     MB_MotorSize = -1,
     MB_BatteryVoltage = -1,
-    MB_VersionNumber = -1
+    MB_VersionNumber = -1,
+    
+    // Time Mark Fall 2014 release
+    TM_onsec = -1,
+    TM_onmin = -1,
+    TM_onhr = -1,
+    TM_offsec = -1,
+    TM_offmin = -1,
+    TM_offhr = -1,
+    TM_pumpmode = -1,
+    TM_tempsetpoint = -1,
+    TM_auxmode = -1,
+    TM_auxonsec = -1,
+    TM_auxonmin = -1,
+    TM_auxonhr = -1,
+    TM_auxoffsec = -1,
+    TM_auxoffmin = -1,
+    TX_auxoffhr = -1,
+    TM_qtperday = -1,
+    TM_cyclespumpmode = -1,
+    TM_currenttemp = -1,
+    TM_plungersize = -1,
+    TM_pinpos = -1,
+    TM_motorsize = -1,
+    TM_gearratio = -1,
+    TM_tahpulse = -1,
+    TM_voltage = -1,
+    TM_version = -1,
+    TM_pwm = -1,
+    TM_motortachT3 = -1,
+    TM_avgT3 = -1,
+    TM_calctach = -1,
+    TM_RTChr = -1,
+    TM_RTCminsec = -1,
+    TM_RTCmo = -1,
+    TM_RTCdayyr = -1,
+    TM_ana1 = -1,
+    TM_ana2 = -1
 }
 
 const PT500_MODEL = "PT500_model";
@@ -73,6 +118,14 @@ MPX <-
 }
 
 const ICHEM_ = "ichem";
+
+const ICHEM_MONTH = "ICHEM_month";
+const ICHEM_DAY = "ICHEM_day";
+const ICHEM_YEAR = "ICHEM_year";
+const ICHEM_HOUR = "ICHEM_hour";
+const ICHEM_MIN = "ICHEM_min";
+const ICHEM_SEC = "ICHEM_sec";
+
 ICHEM <-
 {
     ICHEM_month = -1, // 40002 int
@@ -187,6 +240,10 @@ function MB_toint16(register, offset, a)
     // two regs per word offset by 3 locations
     // and back by 2 because index origin is 1, not 0
     local aloc = ((register - offset) * 2) + 3 - 2; 
+    if(aloc+1 > (a.len() - 1))
+    {
+        return null;
+    }
   return (a[aloc] << 8) | a[aloc + 1];
 } // function MB_toint16(register, offset, a)
 
@@ -195,6 +252,10 @@ function MB_toint32(register, offset, a)
     // MB_toint32 is similar to MB_toint16, except
     // we put together 4 registers
     local aloc = ((register - offset) * 2) + 3 - 2; 
+    if(aloc+3 > (a.len() - 1))
+    {
+        return null;
+    }
     return (a[aloc] << 24) | (a[aloc + 1] << 16) 
             | (a[aloc + 2] << 8) | a[aloc + 3];
 } // function MB_toint32(register, offset, a)
@@ -203,7 +264,11 @@ function MB_tofloat32(register, offset, a)
 {
     // MB_tofloat32 is similar to MB_toint32, except
     // we put together 4 registers and cast to float
-    local aloc = ((register - offset) * 2) + 3 - 2; 
+    local aloc = ((register - offset) * 2) + 3 - 2;
+    if (aloc+3 > (a.len() - 1))
+    {
+        return null;
+    }
     return casti2f((a[aloc] << 24) | (a[aloc + 1] << 16) 
             | (a[aloc + 2] << 8) | a[aloc + 3]);
 } // function MB_tofloat32(register, offset, a)
@@ -222,75 +287,67 @@ device.on(TIME_MARK_JAN14, function(a)
     {
         // This is older version
         server.log("--* Found version 140127!");
-    }
-//    TimeMark.MB_OnTime <- (a[3] << 8) | a[4];
-    TimeMark.MB_OnTime <- MB_toint16(1, 0, a);
-//    TimeMark.MB_OffTime <- (a[5] << 8) | a[6];
-    TimeMark.MB_OffTime <- MB_toint16(2, 0, a);
-//    TimeMark.MB_TempSetPoint <- (a[7] << 8) | a[8];
-    TimeMark.MB_TempSetPoint <- MB_toint16(3, 0, a);
-/*    local tmp = MB_toint16(3, 0, a);
-    if (tmp == TimeMark.MB_TempSetPoint)
-    {
-        server.log("### TempSetPoint Matched: "+tmp);
+    
+        TimeMark.MB_OnTime <- MB_toint16(1, 0, a);
+        TimeMark.MB_OffTime <- MB_toint16(2, 0, a);
+        TimeMark.MB_TempSetPoint <- MB_toint16(3, 0, a);
+        TimeMark.MB_QuartsPerDay <- MB_tofloat32(4, 0, a);
+        TimeMark.MB_Cycles <- MB_toint32(6, 0, a);
+        TimeMark.MB_Temperature <- MB_toint16(8, 0, a);
+        TimeMark.MB_PlungerSize <- MB_toint16(9, 0, a);
+        TimeMark.MB_PinPosition <- MB_toint16(10, 0, a);
+        TimeMark.MB_MotorSize <- MB_toint16(11, 0, a);
+        TimeMark.MB_BatteryVoltage <- MB_tofloat32(12, 0, a);
     } else
     {
-        server.log("###! No Match -  TempSetPoint: "+TimeMark.MB_TempSetPoint
-                    +" tmp: "+tmp);
+/*            foreach (key, val in a)
+        {
+            server.log("Time Mark New key: "+key+" val: "+val)
+        }
+*/        
+            // Time Mark Fall 2014 release
+        const TMoffset = -1;
+        TimeMark.TM_onsec <- MB_toint16(0, TMoffset, a);
+        TimeMark.TM_onmin <- MB_toint16(1, TMoffset, a);
+        TimeMark.TM_onhr <- MB_toint16(2, TMoffset, a);
+        TimeMark.TM_offsec <- MB_toint16(3, TMoffset, a);
+        TimeMark.TM_offmin <- MB_toint16(4, TMoffset, a);
+        TimeMark.TM_offhr <- MB_toint16(5, TMoffset, a);
+        TimeMark.TM_pumpmode <- MB_toint16(6, TMoffset, a);
+        TimeMark.TM_tempsetpoint <- MB_toint16(7, TMoffset, a);
+        TimeMark.TM_auxmod <- MB_toint16(8, TMoffset, a);
+        TimeMark.TM_auxonsec  <- MB_toint16(9, TMoffset, a);
+        TimeMark.TM_auxonmin <- MB_toint16(10, TMoffset, a);
+        TimeMark.TM_auxonhr <- MB_toint16(11, TMoffset, a);
+        TimeMark.TM_auxoffsec <- MB_toint16(12, TMoffset, a);
+        TimeMark.TM_auxoffmin <- MB_toint16(13, TMoffset, a);
+        TimeMark.TX_auxoffhr <- MB_toint16(14, TMoffset, a);
+        
+        TimeMark.TM_qtperday <- MB_tofloat32(15, TMoffset, a);
+        TimeMark.TM_cyclespumpmode <- MB_toint32(17, TMoffset, a);
+        
+        TimeMark.TM_currenttemp <- MB_toint16(19, TMoffset, a);
+        TimeMark.TM_plungersize <- MB_toint16(20, TMoffset, a);
+        TimeMark.TM_pinpos <- MB_toint16(21, TMoffset, a);
+        TimeMark.TM_motorsize <- MB_toint16(22, TMoffset, a);
+        
+        TimeMark.TM_gearratio <- MB_tofloat32(23, TMoffset, a);
+        TimeMark.TM_tahpulse <- MB_toint16(25, TMoffset, a);
+        
+        TimeMark.TM_voltage <- MB_tofloat32(26, TMoffset, a);
+        TimeMark.TM_version <- MB_toint32(28, TMoffset, a);
+        
+        TimeMark.TM_pwm <- MB_toint16(30, TMoffset, a);
+        TimeMark.TM_motortachT3 <- MB_toint16(31, TMoffset, a);
+        TimeMark.TM_avgT3 <- MB_toint16(32, TMoffset, a);
+        TimeMark.TM_calctach <- MB_toint16(33, TMoffset, a);
+        TimeMark.TM_RTChr <- MB_toint16(34, TMoffset, a);
+        TimeMark.TM_RTCminsec <- MB_toint16(35, TMoffset, a);
+        TimeMark.TM_RTCmo <- MB_toint16(36, TMoffset, a);
+        TimeMark.TM_RTCdayyr <- MB_toint16(37, TMoffset, a);
+        TimeMark.TM_ana1 <- MB_toint16(38, TMoffset, a);
+        TimeMark.TM_ana <- MB_toint16(39, TMoffset, a);
     }
-    // Convert the quarts per day from binary to a float
-        local qpd = blob(4);
-        qpd.writen(a[12], 'b');
-        qpd.writen(a[11], 'b');
-        qpd.writen(a[10], 'b');
-        qpd.writen(a[9], 'b');
-        qpd.seek(0, 'b');
-        local quartsPerDay = qpd.readn('f');
-    
- //   TimeMark.MB_QUARTSPERDAY <- quartsPerDay;
-    TimeMark.MB_QuartsPerDay <- quartsPerDay;
-    
-    tmp = MB_tofloat32(4, 0, a);
-    
-    if (tmp == TimeMark.MB_QuartsPerDay)
-    {
-        server.log("### Quarts per day Matched: "+tmp);
-    } else
-    {
-        server.log("###! No Match -  Quarts per day: "+TimeMark.MB_QuartsPerDay
-                    +" tmp: "+tmp);
-    }
-*/
-    TimeMark.MB_QuartsPerDay <- MB_tofloat32(4, 0, a);
- //   TimeMark.MB_Cycles <- (a[13] << 24) | (a[14] << 16) | (a[15] << 8) | a[16];
-    TimeMark.MB_Cycles <- MB_toint32(6, 0, a);
-//    TimeMark.MB_Temperature <- (a[17] << 8) | a[18];
-    TimeMark.MB_Temperature <- MB_toint16(8, 0, a);
- //   TimeMark.MB_PlungerSize <- (a[19] << 8) | a[20];
-    TimeMark.MB_PlungerSize <- MB_toint16(9, 0, a);
-//    TimeMark.MB_PinPosition <- (a[21] << 8) | a[22];
-    TimeMark.MB_PinPosition <- MB_toint16(10, 0, a);
-//    TimeMark.MB_MotorSize <- (a[23] << 8) | a[24];
-    TimeMark.MB_MotorSize <- MB_toint16(11, 0, a);
-//    TimeMark.MB_BatteryVoltage <- casti2f((a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28]); // not working
-    TimeMark.MB_BatteryVoltage <- MB_tofloat32(12, 0, a);
-/*    TimeMark.MB_VersionNumber <- (a[29] << 24) | (a[30] << 16) | (a[31] << 8) | a[32];
-    
-    tmp = MB_toint32(14, 0 , a);
-    if(tmp == TimeMark.MB_VersionNumber)
-    {
-        server.log("### Version Matched: "+tmp);
-    } else
-    {
-        server.log("###! No Match - MB_VersionNumber: "+TimeMark.MB_VersionNumber
-                +"tmp: "+tmp);
-    }
-*/
-//    TimeMark.MB_VersionNumber <- MB_toint32(14, 0, a);
-//    foreach (key, val in TimeMark)
-//        {
-//            server.log("Time Mark key: "+key+" val: "+val)
-//        }
         
 } // end of function(data)
 ); // end device.on(TIME_MARK_JAN14, function(data)
@@ -313,15 +370,10 @@ device.on(MB_PT500_IREG, function(data)
 //            server.log("APG PT-500 ireg key: "+key+" val: "+val)
 //        }
     // Decode registers
-//    PT500.PT500_model <- (data[3] << 8) | data[4];
     PT500.PT500_model <- MB_toint16(299, 298, data);
-//    PT500.PT500_pressure_h2o <- (data[5] << 8) | data[6];
     PT500.PT500_pressure_h2o <- MB_toint16(300, 298, data);
- //   PT500.PT500_tempC <- (data[9] << 8) | data[10];
     PT500.PT500_tempC <- MB_toint16(302, 298, data);
- //   PT500.PT500_calc <- (data[13] << 8) | data[14];
     PT500.PT500_calc <- MB_toint16(304, 298, data);
-//    PT500.PT500_batv <- (data[21] << 8) | data[22];
     PT500.PT500_batv <- MB_toint16(308, 298, data);
 //    foreach (key, val in PT500)
 //    {
@@ -339,37 +391,34 @@ device.on(MB_MPX_IREG, function(data)
 //            server.log("APG MPX ireg key: "+key+" val: "+val)
 //        }
     // Decode registers
-//    MPX.MPX_model <- (data[3] << 8) | data[4];
     MPX.MPX_model <- MB_toint16(299, 298, data);
-//    MPX.MPX_topdist <- (data[5] << 8) | data[6];
     MPX.MPX_topdist <- MB_toint16(300, 298, data);
-//    MPX.MPX_botdist <- (data[7] << 8) | data[8];
     MPX.MPX_botdist <- MB_toint16(301, 298, data);
-//    MPX.MPX_tempC <- (data[9] << 8) | data[10];
     MPX.MPX_tempC <- MB_toint16(302, 298, data);
- //   MPX.MPX_topcalc <- (data[11] << 24) | (data[12] << 16) | (data[13] << 8) | data[14];
     MPX.MPX_topcalc <- MB_toint32(303, 298, data);
- //   MPX.MPX_botcalc <- (data[15] << 24) | (data[16] << 16) | (data[17] << 8) | data[18];
     MPX.MPX_botcalc <- MB_toint32(305, 298, data);
 //    foreach (key, val in PT500)
 //    {
 //        server.log("APG MPX: "+key+": "+val);
 //    }
-    
 } // end of function(data)
 ); // end device.on(MB_MPX_IREG, function(data)
-
 
 const ICHEM_HREG = "iChem_hreg";
 device.on(ICHEM_HREG, function(data)
 {
-    
+    server.log("-- agent ICHEM data array length: "+data.len());
     ICHEM.ICHEM_month <- (data[7] << 8) | data[8]; // 40002 int
     ICHEM.ICHEM_day <- (data[9] << 8) | data[10]; // 40003 int
     ICHEM.ICHEM_year <- (data[11] << 8) | data[12]; // 40004 int
     ICHEM.ICHEM_hour <- (data[13] << 8) | data[14]; // 40005 int
     ICHEM.ICHEM_min<- (data[15] << 8) | data[16]; // 40006 int
     ICHEM.ICHEM_sec <- (data[17] << 8) | data[18]; // 40007 int
+    foreach (key, val in ICHEM)
+    {
+        server.log("agent ICHEM: "+key+": "+val);
+    }
+    
 /*    
     ICHEM.ICHEM_daily_volume <- (data[19] << 8) | data[20]; // 40100 float
     ICHEM.ICHEM_daily_cycles <- (data[3] << 8) | data[4]; // 40102 float
@@ -445,6 +494,7 @@ device.on("tabledata",function(data)
         local report_PT500_agent = ""; // PT500 info decoded by agent
         local report_MPX_agent = ""; // MPX info decoded by agent
         local report_ICHEM_agent = ""; // ICHEM info decoded by agent
+        local report_TM_agent = ""; // TM info decoded by agent
         local report_pvoltest = ""; // for log report
         local report_data = "";  // for log report
         local keys = [ ];
@@ -464,7 +514,9 @@ device.on("tabledata",function(data)
             // Catching keys longer than 9!!!!! They are the pvoltest time string
             if(key.len() > 9 && (key.find("MB") == null 
                             && key.find("PT500") == null
-                            && key.find("MPX") == null )) // time stamp string is longer than the other keys
+                            && key.find("MPX") == null 
+                            && key.find("ICHEM") == null
+                            && key.find("TM") == null)) // time stamp string is longer than the other keys
             {
                 // Catch pvoltest data here
                     // build time string
@@ -489,7 +541,8 @@ device.on("tabledata",function(data)
                 if (key.find("MB") != null ||
                     key.find("PT500") != null ||
                     key.find("MPX") != null ||
-                    key.find("ICHEM") != null)
+                    key.find("ICHEM") != null ||
+                    key.find("TM") != null)
                 {   
                     
                     // list of MB info
@@ -586,9 +639,10 @@ ICHEM <-
     ICHEM_forever_volume = -1, // 40122 float
 }
 */
-                    // Put info into report_MPX_agent
+                    // Put info into report_ICHEM_agent
                     if(key.find("ICHEM") != null)
                     {
+                        server.log("()() agent Found ICHEM key: "+key);
                         if ( bootcount != 0 // &&
                             // (key == "MPX_topdist" ||
                             //key == "MPX_botdist" ||
@@ -602,11 +656,26 @@ ICHEM <-
                             report_ICHEM_agent += key+", "+ICHEM[key]+"\n";
                         }
                     } // key.find("ICHEM") != null 
-
-
-
-
                     
+                    // Put info into report_TM_agent
+                    if(key.find("TM") != null)
+                    {
+                        server.log("()() agent Found TM key: "+key);
+                        if ( bootcount != 0 // &&
+                            // (key == "MPX_topdist" ||
+                            //key == "MPX_botdist" ||
+                            // key == "MPX_tempC")
+                            )
+                        {
+                            report_TM_agent += key+", "+TimeMark[key]+"\n";
+                        } else
+                        {
+                        // save all if bootcount == 0
+                            report_TM_agent += key+", "+TimeMark[key]+"\n";
+                        }
+                    } // key.find("ICHEM") != null 
+
+     
                 } else
                 {   // list of other data
                     // place other data in report_data string
@@ -646,6 +715,10 @@ ICHEM <-
         if(report_ICHEM_agent.len() != 0)
         {
             server.log("--***-- Agent ICHEM Channels --***--\n"+report_ICHEM_agent);
+        }
+        if(report_TM_agent.len() != 0)
+        {
+            server.log("--***-- Agent TimeMark Channels --***--\n"+report_TM_agent);
         }
         if(report_data.len() != 0)
         {
