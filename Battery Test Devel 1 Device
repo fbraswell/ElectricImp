@@ -46,56 +46,7 @@ const MODBUS = "modbus";
 MB_MODEL_MPX <- 5;
 // Model for PT-500 is 9
 MB_MODEL_PT500 <- 9;
- 
- // Variables used to determine which
- // Modbus devices are connected
- // MB_ADDR_TimeMark_Found <- 0;
-// MB_ADDR_PT500_Found <- 0;
-// MB_ADDR_MPX_Found <- 0;
-// MB_ADDR_ICHEM_Found <- 0;
- 
-// MB_timesfound <- -5;
-/*
-// Time Mark controller registers
-const MB_ONTIME = "MB_OnTime";
-const MB_OFFTIME = "MB_OffTime";
-const MB_TEMPSETPOINT = "MB_TempSetPoint";
-const MB_QUARTSPERDAY = "MB_QuartsPerDay";
-const MB_CYCLES = "MB_Cycles";
-const MB_TEMPERATURE = "MB_Temperature";
-const MB_PLUNGERSIZE = "MB_PlungerSize";
-const MB_PINPOSITION = "MB_PinPosition";
-const MB_MOTORSIZE = "MB_MotorSize";
-const MB_BATTERYVOLTAGE = "MB_BatteryVoltage";
-const MB_VERSIONNUMBER = "MB_VersionNumber";
 
-const TM_ONSEC = "TM_onsec";
-const TM_ONMIN = "TM_onmin";
-const TM_ONHR = "TM_onhr";
-const TM_OFFSEC = "TM_offsec";
-const TM_OFFMIN = "TM_offmin";
-const TM_OFFHR = "TM_offhr";
-
-const PT500_MODEL = "PT500_model";
-const PT500_PRESSURE_H2O = "PT500_pressure_h2o";
-const PT500_TEMPC = "PT500_tempC";
-const PT500_CALC = "PT500_calc";
-const PT500_BATV = "PT500_batv";
-
-const MPX_MODEL = "MPX_model";
-const MPX_TOPDIST = "MPX_topdist";
-const MPX_BOTDIST = "MPX_botdist";
-const MPX_TEMPC = "MPX_tempC";
-const MPX_TOPCALC = "MPX_topcalc";
-const MPX_BOTCALC = "MPX_botcalc";
-
-const ICHEM_MONTH = "ICHEM_month";
-const ICHEM_DAY = "ICHEM_day";
-const ICHEM_YEAR = "ICHEM_year";
-const ICHEM_HOUR = "ICHEM_hour";
-const ICHEM_MIN = "ICHEM_min";
-const ICHEM_SEC = "ICHEM_sec";
-*/
 // Voltage regulator control & constants
 const REGULATOR_ON = 0x01;
 const REGULATOR_OFF = 0x00;
@@ -495,73 +446,6 @@ function logMB_TimeMark()
         // MB Data available in the array
         const TIME_MARK_JAN14 = "time_mark_jan14";
         agent.send(TIME_MARK_JAN14, a); // Send raw data to Agent
-/*        foreach (key, val in a)
-        {
-            server.log("TM key: "+key+" val: "+val)
-        }
-*/      
-/*
-        local tmversion = (a[29] << 24) | (a[30] << 16) | (a[31] << 8) | a[32];
-        local onTime = (a[3] << 8) | a[4];
-        local offTime = (a[5] << 8) | a[6]; 
-        
-        if(tmversion == 140127)
-        {
-        
-        // Convert the quarts per day from binary to a float
-        local qpd = blob(4);
-        qpd.writen(a[12], 'b');
-        qpd.writen(a[11], 'b');
-        qpd.writen(a[10], 'b');
-        qpd.writen(a[9], 'b');
-        qpd.seek(0, 'b');
-        local quartsPerDay = qpd.readn('f');
-
-        nv.sensor[MB_QUARTSPERDAY] <- quartsPerDay;
-        nv.sensor[MB_CYCLES] <- (a[13] << 24) | (a[14] << 16) | (a[15] << 8) | a[16];
-        nv.sensor[MB_TEMPERATURE] <- (a[17] << 8) | a[18];
-        
-            // The battery voltage on an AC unit will always be 0
-            // in that case, do not send
-        local batvolts = casti2f((a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28]); // not working
-        if(batvolts) // only report if batvolts ne 0
-        {
-            nv.sensor[MB_BATTERYVOLTAGE] <- batvolts;
-        }
-        
-        // These values rarely change, if ever
-        // only report them at start-up time
-        if(nv.bootcount == 0)
-        {
-                // send battery voltage to show it is working, even if 0
-            nv.sensor[MB_BATTERYVOLTAGE] <- casti2f((a[25] << 24) | (a[26] << 16) | (a[27] << 8) | a[28]); // not working
-            nv.sensor[MB_VERSIONNUMBER] <- (a[29] << 24) | (a[30] << 16) | (a[31] << 8) | a[32];
-            nv.sensor[MB_ONTIME] <- onTime;
-            nv.sensor[MB_OFFTIME] <- offTime;
-            nv.sensor[MB_TEMPSETPOINT] <- (a[7] << 8) | a[8];
-            nv.sensor[MB_PLUNGERSIZE] <- (a[19] << 8) | a[20];
-            nv.sensor[MB_PINPOSITION] <- (a[21] << 8) | a[22];
-            nv.sensor[MB_MOTORSIZE] <- (a[23] << 8) | a[24]
-        }
-        } else
-        {
-            // Time Mark new controller
-            
-//const TM_ONSEC = "TM_onsec";
-//const TM_ONMIN = "TM_onmin";
-//const TM_ONHR = "TM_onhr";
-//const TM_OFFSEC = "TM_offsec";
-//const TM_OFFMIN = "TM_offmin";
-//const TM_OFFHR = "TM_offhr";
-
-            nv.sensor[TM_ONSEC] <- -3;
-            nv.sensor[TM_ONMIN] <- -3;
-            nv.sensor[TM_ONHR] <- -3;
-            nv.sensor[TM_OFFSEC] <- -3;
-            nv.sensor[TM_OFFMIN] <- -3;
-            nv.sensor[TM_OFFHR] <- -3;
-        }
-*/        
         
     } else 
     {   // no data in MB array
@@ -636,28 +520,7 @@ function logMB_APG_ireg()
 //          {
  //            server.log("APG ireg key: "+key+" val: "+val)
 //          }
-/*                    
-PT500 <- 
-{
-    PT500_MODEL = -1, once
-    PT500_PRESSURE_H2O = -1, each time
-    PT500_TEMPC = -1, each time
-    PT500_CALC = -1, never
-    PT500_BATV = -1 once
-}                    
-*/
-/*           // These two are sent every time
-            nv.sensor[PT500_PRESSURE_H2O] <- (a[5] << 8) | a[6];
-            nv.sensor[PT500_TEMPC] <- (a[9] << 8) | a[10];
-        
-            if(nv.bootcount == 0)
-            {
-                // send these only at power-up
-               nv.sensor[PT500_MODEL] <- (a[3] << 8) | a[4];
-                nv.sensor[PT500_BATV] <- (a[21] << 8) | a[22];
-                nv.sensor[PT500_CALC] <- (a[13] << 8) | a[14];
-            }
-*/
+
         } else // if (model == MB_MODEL_PT500)
         {
             server.log("Can't find APG ireg MODBUS registers! Model = "+model);
@@ -699,28 +562,7 @@ function logMB_MPX_ireg()
 //          {
  //             server.log("MPX ireg key: "+key+" val: "+val)
 //          }
-
-/*
-const MPX_MODEL = "MPX_model"; one time
-const MPX_TOPDIST = "MPX_topdist"; each time
-const MPX_BOTDIST = "MPX_botdist"; each time
-const MPX_TEMPC = "MPX_tempC"; each time
-const MPX_TOPCALC = "MPX_topcalc"; one time
-const MPX_BOTCALC = "MPX_botcalc"; one time
-*/
-            // These two are sent every time
-/*            nv.sensor[MPX_TOPDIST] <- (a[5] << 8) | a[6];
-            nv.sensor[MPX_BOTDIST] <- (a[7] << 8) | a[8];
-            nv.sensor[MPX_TEMPC] <- (a[9] << 8) | a[10];
-        
-            if(nv.bootcount == 0)
-            {
-                    // send these only at power-up
-                nv.sensor[MPX_MODEL] <- (a[3] << 8) | a[4];
-                nv.sensor[MPX_TOPCALC] <- (a[11] << 8) | (a[12] << 8) | (a[13] << 8) | a[14];
-                nv.sensor[MPX_BOTCALC] <- (a[15] << 8) | (a[16] << 8) | (a[17] << 8) | a[18];
-            } // if(nv.bootcount == 0)
- */           
+           
         } else // if (model == MB_MODEL_MPX)
         {
             server.log("Can't find  MPX ireg MODBUS registers! Model = "+model);
@@ -759,21 +601,7 @@ function logMB_ICHEM()
 //        {
 //            server.log("device ICHEM key: "+key+" val: "+val)
 //        }
-/*
-const ICHEM_MONTH = "ICHEM_month";
-const ICHEM_DAY = "ICHEM_day";
-const ICHEM_YEAR = "ICHEM_year";
-const ICHEM_HOUR = "ICHEM_hour";
-const ICHEM_MIN = "ICHEM_min";
-const ICHEM_SEC = "ICHEM_sec";
-
-        nv.sensor[ICHEM_MONTH] <- -2;
-        nv.sensor[ICHEM_DAY] <- -2;
-        nv.sensor[ICHEM_YEAR] <- -2;
-        nv.sensor[ICHEM_HOUR] <- -2;
-        nv.sensor[ICHEM_MIN] <- -2;
-        nv.sensor[ICHEM_SEC] <- -2;
-*/        
+     
     } else 
     {   // no data in APG MB array
         server.log("Can't read ICHEM MODBUS registers!");
@@ -1062,17 +890,7 @@ function dispatch()
           findMB();  
         }
 
-// MB_ADDR_TimeMark <- 0x10;
-// MB_ADDR_PT500 <- 0x01;
-// MB_ADDR_MPX <- 0x01;
-// MB_ADDR_ICHEM <- 0x01;
-
- // MB_ADDR_TimeMark_Found <- 0;
- // MB_ADDR_PT500_Found <- 0;
- // MB_ADDR_MPX_Found <- 0;
- // MB_ADDR_ICHEM_Found <- 0;
- 
-        server.log(format("** TimeMark: %d; PT-500: %d; MPX: %d; ICHEM: %d", 
+       server.log(format("** TimeMark: %d; PT-500: %d; MPX: %d; ICHEM: %d", 
                       nv.MB_ADDR_TimeMark_Found, nv.MB_ADDR_PT500_Found
                       nv.MB_ADDR_MPX_Found, nv.MB_ADDR_ICHEM_Found))
  
