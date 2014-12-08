@@ -14,26 +14,7 @@ XIVELY_API_ENDPOINT <- "no Xively endpoint yet";
 XIVELY_API_KEY <- "no Xively feed key yet";
 
 MB_Device_Data <- { };
-/*
-const MB_ONTIME = "MB_OnTime";
-const MB_OFFTIME = "MB_OffTime";
-const MB_TEMPSETPOINT = "MB_TempSetPoint";
-const MB_QUARTSPERDAY = "MB_QuartsPerDay";
-const MB_CYCLES = "MB_Cycles";
-const MB_TEMPERATURE = "MB_Temperature";
-const MB_PLUNGERSIZE = "MB_PlungerSize";
-const MB_PINPOSITION = "MB_PinPosition";
-const MB_MOTORSIZE = "MB_MotorSize";
-const MB_BATTERYVOLTAGE = "MB_BatteryVoltage";
-const MB_VERSIONNUMBER = "MB_VersionNumber";
 
-const TM_ONSEC = "TM_onsec";
-const TM_ONMIN = "TM_onmin";
-const TM_ONHR = "TM_onhr";
-const TM_OFFSEC = "TM_offsec";
-const TM_OFFMIN = "TM_offmin";
-const TM_OFFHR = "TM_offhr";
-*/
 // Collection of selected data to be sent to Xively
 // every time - The entire set of variables is only
 // sent when bootcount == 0, at start-up or restart
@@ -113,13 +94,7 @@ TimeMark <-
     TM_ana1 = -1,
     TM_ana2 = -1
 }
-/*
-const PT500_MODEL = "PT500_model";
-const PT500_PRESSURE_H2O = "PT500_pressure_h2o";
-const PT500_TEMPC = "PT500_tempC";
-const PT500_CALC = "PT500_calc";
-const PT500_BATV = "PT500_batv";
-*/
+
 PT500 <- 
 {
     PT500_model = -1,
@@ -128,14 +103,7 @@ PT500 <-
     PT500_calc = -1,
     PT500_batv = -1
 }
-/*
-const MPX_MODEL = "MPX_model";
-const MPX_TOPDIST = "MPX_topdist";
-const MPX_BOTDIST = "MPX_botdist";
-const MPX_TEMPC = "MPX_tempC"
-const MPX_TOPCALC = "MPX_topcalc";
-const MPX_BOTCALC = "MPX_botcalc";
-*/
+
 MPX <-
 {
     MPX_model = -1,
@@ -145,16 +113,7 @@ MPX <-
     MPX_topcalc = -1,
     MPX_botcalc = -1
 }
-/*
-const ICHEM_ = "ichem";
 
-const ICHEM_MONTH = "ICHEM_month";
-const ICHEM_DAY = "ICHEM_day";
-const ICHEM_YEAR = "ICHEM_year";
-const ICHEM_HOUR = "ICHEM_hour";
-const ICHEM_MIN = "ICHEM_min";
-const ICHEM_SEC = "ICHEM_sec";
-*/
 ICHEM <-
 {
     ICHEM_month = -1, // 40002 int
@@ -278,14 +237,15 @@ function MB_error_check(a)
     // a[0] is physical addr byte
     // a[1] is command byte
     // a[2], a[3] is length of data
-    server.log(format("-&& PhyAddr: %d, MBcode: %d, LengthData: %d:%d", a[0], a[1], a[2], a[3]));
     if (a[1] == 0)
     {
         // invalid command code
+        server.log(format("-&& MB Error! - PhyAddr: %d, MBcode: %d, LengthData: %d:%d", a[0], a[1], a[2], a[3]));
         return 0;
     } else if(a[1] > 128)
     {
         // command returned error
+        server.log(format("-&& MB Error! - PhyAddr: %d, MBcode: %d, LengthData: %d:%d", a[0], a[1], a[2], a[3]));
         return 0;
     }
     return 1; // good MB package
@@ -448,12 +408,7 @@ device.on(ICHEM_HREG, function(data)
     {
         return; // Found MB data error
     }
-//    ICHEM.ICHEM_month <- (data[7] << 8) | data[8]; // 40002 int
-//    ICHEM.ICHEM_day <- (data[9] << 8) | data[10]; // 40003 int
-//    ICHEM.ICHEM_year <- (data[11] << 8) | data[12]; // 40004 int
-//    ICHEM.ICHEM_hour <- (data[13] << 8) | data[14]; // 40005 int
-//    ICHEM.ICHEM_min<- (data[15] << 8) | data[16]; // 40006 int
-//    ICHEM.ICHEM_sec <- (data[17] << 8) | data[18]; // 40007 int
+
     const ICHEMoffset = -1;
     ICHEM.ICHEM_month <- MB_toint16(2, ICHEMoffset, data); // 40002 int
     ICHEM.ICHEM_day <- MB_toint16(3, ICHEMoffset, data); // 40003 int
@@ -541,12 +496,6 @@ device.on("tabledata",function(data)
         local makecsv = ""; // used to build csv file for Xively
         local report_MB = ""; // MB for log report decoded by device
         
-/*        local report_MB_agent = ""; // MB info decoded by agent
-        local report_PT500_agent = ""; // PT500 info decoded by agent
-        local report_MPX_agent = ""; // MPX info decoded by agent
-        local report_ICHEM_agent = ""; // ICHEM info decoded by agent
-        local report_TM_agent = ""; // TM info decoded by agent
-*/        
         local report_pvoltest = ""; // for log report
         local report_data = "";  // for log report
         local keys = [ ];
@@ -559,7 +508,6 @@ device.on("tabledata",function(data)
         // sorting the keys makes the list easier to read
         keys.sort();
 //        server.log("++++++++keys length: "+keys.len());
-//        foreach (key, val in data)
 
         foreach (key in keys)
         {
@@ -591,37 +539,6 @@ pvolttest key: 1417952870; value 0.554026
                 report_pvoltest += "pvolttest, "+tformat+", "+val+"\n";
                 
             } else 
-/*            if (exp_mb.capture(key))
-            {
-                // found MB key
-                server.log("MB key: "+key+"; value "+val);
-                
-                    // list of MB info
-                    // put MB info in report_MB string
-//                    report_MB += key+", "+val+"\n";
-                    
-                        if ( bootcount != 0 &&
-                            (key == "MB_Cycles" || 
-                             key == "MB_QuartsPerDay" || 
-                             key == "MB_Temperature" ||
-                             
-                             key == "PT500_PRESSURE_H2O" ||
-                             key == "PT500_TEMPC" ||
-                             
-                             key == "MPX_topdist" ||
-                            key == "MPX_botdist" ||
-                            key == "MPX_tempC"))
-                        {   
-                        // only save these three
-                            report_MB += key+", "+val+"\n";
-                        } else
-                        {
-                        // save all if bootcount == 0
-                            report_MB += key+", "+val+"\n";
-                        }
-                
-            } else
-*/
             {
                 // all other keys
 //                server.log("other key: "+key+"; value "+val);
@@ -674,184 +591,9 @@ pvolttest key: 1417952870; value 0.554026
                 } //  if(val)
                 MB_Device_Data[key] = null; // set back to null for next time
             } // foreach (key, val in MB_Device_Data)
-/*            
-            // Catching keys longer than 9!!!!! They are the pvoltest time string
-            if(key.len() > 9 && (key.find("MB") == null 
-                            && key.find("PT500") == null
-                            && key.find("MPX") == null 
-                            && key.find("ICHEM") == null
-                            && key.find("TM") == null)) // time stamp string is longer than the other keys
-            {
-                // Catch pvoltest data here
-                
-                
-//pvolttest key: 1417952860; value 0.53342
-//pvolttest key: 1417952870; value 0.554026
-
-                    // build time string
-                local v = key.tointeger() - data["time"];
-                local t = date(key.tointeger());
-                local tformat = format("%4d-%02d-%02dT%02d:%02d:%02d", 
-                                        t.year, t.month + 1, t.day, t.hour, t.min, t.sec);
-// debug               server.log("table key: "+key+", val: "+val+" - time diff: "+v+" time: "+tformat);
-                    // build csv entry with name of chan, time, data value
-                makecsv += "pvolttest, "+tformat+", "+val+"\n";
-                    // list of pvoltest info
-                report_pvoltest += "pvolttest, "+tformat+", "+val+"\n";
-            } else
-            {
-                // Catch MB and other data here
-//                server.log("table key: "+key+", val: "+val);
-                    // build csv entry with name of chan, data value
-                makecsv += key+", "+val+"\n";
-                
-                
-                // Locate Modbus data
-                if (key.find("MB") != null ||
-                    key.find("PT500") != null ||
-                    key.find("MPX") != null ||
-                    key.find("ICHEM") != null ||
-                    key.find("TM") != null)
-                {   
-                    
-                    // list of MB info
-                    // put MB info in report_MB string
-                    report_MB += key+", "+val+"\n";
-                    
-                    if(key.find("MB") != null)
-                    {
-                        if ( bootcount != 0 &&
-                            (key == "MB_Cycles" || 
-                             key == "MB_QuartsPerDay" || 
-                             key == "MB_Temperature" ))
-                        {   
-                        // only save these three
-                            report_MB_agent += key+", "+TimeMark[key]+"\n";
-                        } else
-                        {
-                        // save all if bootcount == 0
-                            report_MB_agent += key+", "+TimeMark[key]+"\n";
-                        }
-                    } // key.find("MB") != null
-
-//    PT500_MODEL = -1, once
-//    PT500_PRESSURE_H2O = -1, each time
-//    PT500_TEMPC = -1, each time
-//    PT500_CALC = -1, never
-//    PT500_BATV = -1 once
-                    // PT-500 info
-                    // Put info into report_PT500_agent
-                    if(key.find("PT500") != null)
-                    {
-                        if ( bootcount != 0 &&
-                           (key == "PT500_PRESSURE_H2O" ||
-                            key == "PT500_TEMPC"))
-                        {
-                            report_PT500_agent += key+", "+PT500[key]+"\n";
-                        } else
-                        {
-                        // save all if bootcount == 0
-                            report_PT500_agent += key+", "+PT500[key]+"\n";
-                        }
-                    } // key.find("PT500") != null 
-
-//    MPX_model = -1, one time
-//    MPX_topdist = -1, each time
-//    MPX_botdist = -1, each time
-//    MPX_tempC = -1, each time
-//    MPX_topcalc = -1, one time
-//    MPX_botcalc = -1 one time
-
-                    // Put info into report_MPX_agent
-                    if(key.find("MPX") != null)
-                    {
-                        if ( bootcount != 0 &&
-                           (key == "MPX_topdist" ||
-                            key == "MPX_botdist" ||
-                            key == "MPX_tempC"))
-                        {
-                            report_MPX_agent += key+", "+MPX[key]+"\n";
-                        } else
-                        {
-                        // save all if bootcount == 0
-                            report_MPX_agent += key+", "+MPX[key]+"\n";
-                        }
-                    } // key.find("MPX") != null 
-
-//    ICHEM_month = -1, // 40002 int
-//    ICHEM_day = -1, // 40003 int
-//    ICHEM_year = -1, // 40004 int
-//    ICHEM_hour = -1, // 40005 int
-//    ICHEM_min = -1, // 40006 int
-//    ICHEM_sec = -1, // 40007 int
-    
-//    ICHEM_daily_volume = -1, // 40100 float
-//    ICHEM_daily_cycles = -1, // 40102 float
-//    ICHEM_injection_rate = -1, // 40104 float
-//    ICHEM_accum_cycle_vol = -1, // 40106 float
-//    ICHEM_accum_daily_vol = -1, // 40108 float
-//    ICHEM_curr_tank_lev = -1, // 40110 float
-//    ICHEM_fm_k_factor = -1, // 40112 float
-//    ICHEM_yesterday_volume = -1, // 40114 float
-//    ICHEM_week_volume = -1, // 40116 float
-//    ICHEM_month_volume = -1, // 40118 float
-//    ICHEM_year_volume = -1, // 40120 float
-//    ICHEM_forever_volume = -1, // 40122 float
-
-                    // Put info into report_ICHEM_agent
-                    if(key.find("ICHEM") != null)
-                    {
-                        server.log("()() agent Found ICHEM key: "+key);
-                        if ( bootcount != 0 // &&
-                            // (key == "MPX_topdist" ||
-                            //key == "MPX_botdist" ||
-                            // key == "MPX_tempC")
-                            )
-                        {
-                            report_ICHEM_agent += key+", "+ICHEM[key]+"\n";
-                        } else
-                        {
-                        // save all if bootcount == 0
-                            report_ICHEM_agent += key+", "+ICHEM[key]+"\n";
-                        }
-                    } // key.find("ICHEM") != null 
-                    
-                    // Put info into report_TM_agent
-                    if(key.find("TM") != null)
-                    {
-                        server.log("()() agent Found TM key: "+key);
-                        if ( bootcount != 0 // &&
-                            // (key == "MPX_topdist" ||
-                            //key == "MPX_botdist" ||
-                            // key == "MPX_tempC")
-                            )
-                        {
-                            report_TM_agent += key+", "+TimeMark[key]+"\n";
-                        } else
-                        {
-                        // save all if bootcount == 0
-                            report_TM_agent += key+", "+TimeMark[key]+"\n";
-                        }
-                    } // key.find("ICHEM") != null 
-
-     
-                } else
-                {   // list of other data
-                    // place other data in report_data string
-                    if (key.find("wakewhy") != null)
-                    {   // wakewhy is a numeric code 1 - 8
-                        // look up the string in the table
-                        val = val + ": " + impWakeCodes[val];
-                    }
-                    report_data += key+", "+val+"\n";
-                }
-            } // if(key.len() > 9 && (key.find("MB") == null ...
-*/            
             
         } // foreach (key in keys)
 
-
-        
         // Report values to the log
         if(report_pvoltest.len() != 0)
         {
@@ -861,48 +603,13 @@ pvolttest key: 1417952870; value 0.554026
         {
             server.log("--***-- Modbus Channels --***--\n"+report_MB);
         }
-/*
-        if(report_MB_agent.len() != 0)
-        {
-            server.log("--***-- Agent Modbus Channels --***--\n"+report_MB_agent);
-        }
-        if(report_PT500_agent.len() != 0)
-        {
-            server.log("--***-- Agent PT500 Channels --***--\n"+report_PT500_agent);
-        }
-        if(report_MPX_agent.len() != 0)
-        {
-            server.log("--***-- Agent MPX Channels --***--\n"+report_MPX_agent);
-        }
-        if(report_ICHEM_agent.len() != 0)
-        {
-            server.log("--***-- Agent ICHEM Channels --***--\n"+report_ICHEM_agent);
-        }
-        if(report_TM_agent.len() != 0)
-        {
-            server.log("--***-- Agent TimeMark Channels --***--\n"+report_TM_agent);
-        }
-*/
+
         if(report_data.len() != 0)
         {
             server.log("--***-- Data Channels --***--\n"+report_data);
         }
         server.log("--***-- End Channels --***--\n");
-/*        
-        local idx = 0; // default transducer mode
-        if(IMP_MODE == PUMP_MODE) // check for pump mode
-        {
-            if ((idx = makecsv.find("MB")) != null)
-            {
-                server.log("--***-- Voltages --***--\n"+makecsv.slice(0, idx-1));
-            } else
-            {
-                idx = 0; // didn't find "MB"; couldn't read Modbus
-            }
-        }
-        server.log("--***-- Data Channels --***--\n"+makecsv.slice(idx));
-        server.log("--***-- End Channels --***--\n");
-*/
+
             // DEBUG dump csv string
 //        server.log("----****----Make CSV:\n"+makecsv);
             // send data to Xively feed
