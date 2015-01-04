@@ -28,8 +28,8 @@ MB_Each_time <-
     PT500_pressure_h2o = -2,
     PT500_tempC = -2,
                              
-    MPX_topdist = -2,
-    MPX_botdist = -2,
+    MPX_topdistin = -2,
+    MPX_botdistin = -2,
     MPX_tempC = -2,
     
     TM_onsec = -2,
@@ -38,6 +38,35 @@ MB_Each_time <-
     TM_offsec = -2,
     TM_offmin = -2,
     TM_offhr = -2,
+    TM_pumpmode = -2,
+    TM_tempsetpoint = -2,
+    TM_auxmode = -2,
+    TM_auxonsec = -2,
+    TM_auxonmin = -2,
+    TM_auxonhr = -2,
+    TM_auxoffsec = -2,
+    TM_auxoffmin = -2,
+    TM_auxoffhr = -2,
+    TM_qtperday = -2,
+    TM_cyclespumpmode = -2,
+    TM_currenttemp = -2,
+    
+    ICHEM_month = -2, // 40002 int
+    ICHEM_day = -2, // 40003 int
+    ICHEM_year = -2, // 40004 int
+    ICHEM_hour = -2, // 40005 int
+    ICHEM_min = -2, // 40006 int
+    ICHEM_sec = -2, // 40007 int
+    
+    ICHEM_last_flow_meter_cal_month = -2, // 40008 int
+    ICHEM_last_flow_meter_cal_day = -2, // 40009 int
+    ICHEM_last_flow_meter_cal_year = -2, // 40010 int
+    
+    ICHEM_MB_cycles_freq_bitmap = -2, // 40014 int
+    
+    ICHEM_daily_volume = -2, // 40100 float rw
+    ICHEM_daily_cycles = -2, // 40102 float
+    ICHEM_injection_rate = -2, // 40104 float
 };
 
 TimeMark_140127 <- 
@@ -54,6 +83,12 @@ TimeMark_140127 <-
     MB_MotorSize = -1,
     MB_BatteryVoltage = -1,
     MB_VersionNumber = -1,
+    
+    // coils
+    MB_Auto_Manual_Mode = -1, // coil addr1
+    MB_Timer_Mode = -1, // coil addr2
+    MB_Temp_Mode = -1, // coil addr3
+    MB_Comm_Mode = -1, // coil addr4
 };
 TimeMark <-
 {
@@ -92,7 +127,17 @@ TimeMark <-
     TM_RTCmo = -1,
     TM_RTCdayyr = -1,
     TM_ana1 = -1,
-    TM_ana2 = -1
+    TM_ana2 = -1,
+    
+        // coils
+    TM_Timer_Mode = -1, // coil addr0
+	TM_Temp_Mode = -1, // coil addr1
+	TM_Off_First = -1, // 1 = off first addr2
+	TM_Variable_Speed_Mode = -1, // variable speed addr3
+	TM_Auto_Manual_Mode = -1, // Auto coil addr4
+	TM_Aux_Mode = -1, // Aux enable addr5
+	TM_Reserved = -1, // unused addr6
+	TM_Comm_Mode = -1, // Comm enable coil addr7
 }
 
 PT500 <- 
@@ -108,7 +153,9 @@ MPX <-
 {
     MPX_model = -1,
     MPX_topdist = -1,
+    MPX_topdistin = -1,
     MPX_botdist = -1,
+    MPX_botdistin = -1,
     MPX_tempC = -1,
     MPX_topcalc = -1,
     MPX_botcalc = -1
@@ -116,6 +163,7 @@ MPX <-
 
 ICHEM <-
 {
+        // integer registers start at 0
     ICHEM_month = -1, // 40002 int
     ICHEM_day = -1, // 40003 int
     ICHEM_year = -1, // 40004 int
@@ -123,7 +171,76 @@ ICHEM <-
     ICHEM_min = -1, // 40006 int
     ICHEM_sec = -1, // 40007 int
     
-    ICHEM_daily_volume = -1, // 40100 float
+    ICHEM_last_flow_meter_cal_month = -1, // 40008 int
+    ICHEM_last_flow_meter_cal_day = -1, // 40009 int
+    ICHEM_last_flow_meter_cal_year = -1, // 40010 int
+    
+    ICHEM_MB_cycles_freq_bitmap = -1, // 40014 int
+    
+    ICHEM_last_cycle_freq_change_year = -1, // 40015 int
+    ICHEM_last_cycle_freq_change_month = -1, // 40016 int
+    ICHEM_last_cycle_freq_change_day = -1, // 40017 int
+
+    ICHEM_last_flow_meter_check_year = -1, // 40018 int
+    ICHEM_last_flow_meter_check_month = -1, // 40019 int
+    ICHEM_last_flow_meter_check_day = -1, // 40020 int
+    
+    ICHEM_last_volume_change_year = -1, // 40021 int
+    ICHEM_last_volume_change_month = -1, // 40022 int
+    ICHEM_last_volume_change_day = -1, // 40023 int
+    
+    ICHEM_completed_daily_cycles = -1, // 40024 int
+    ICHEM_pumped_daily_cycles = -1, // 40025 int
+    
+    ICHEM_manual_mode_entry_year = -1, // 40026 int
+    ICHEM_manual_mode_entry_month = -1, // 40027 int
+    ICHEM_manual_mode_entry_day = -1, // 40028 int
+    
+    ICHEM_last_custom_batch_year = -1, // 40029 int
+    ICHEM_last_custom_batch_month = -1, // 40030 int
+    ICHEM_last_custom_batch_day = -1, // 40031 int
+    
+    ICHEM_ext_sys_override_year = -1, // 40032 int
+    ICHEM_ext_sys_override_month = -1, // 40033 int
+    ICHEM_ext_sys_override_day = -1, // 40034 int
+    
+    ICHEM_sys_fail_year = -1, // 40035 int
+    ICHEM_sys_fail_month = -1, // 40036 int
+    ICHEM_sys_fail_day = -1, // 40037 int
+    
+    ICHEM_battery_alert_year = -1, // 40038 int
+    ICHEM_battery_alert_month = -1, // 40039 int
+    ICHEM_battery_alert_day = -1, // 40040 int
+    ICHEM_battery_alert_hour = -1, // 40041 int
+    ICHEM_battery_alert_min = -1, // 40042 int
+    
+    ICHEM_battery_alarm_year = -1, // 40043 int
+    ICHEM_battery_alarm_month = -1, // 40044 int
+    ICHEM_battery_alarm_day = -1, // 40045 int
+    ICHEM_battery_alarm_hour = -1, // 40046 int
+    ICHEM_battery_alarm_min = -1, // 40047 int
+    
+    ICHEM_low_tank_year = -1, // 40048 int
+    ICHEM_low_tank_month = -1, // 40049 int
+    ICHEM_low_tank_day = -1, // 40050 int
+    
+    ICHEM_hi_flow_year = -1, // 40051 int
+    ICHEM_hi_flow_month = -1, // 40052 int
+    ICHEM_hi_flow_day = -1, // 40053 int
+    
+    ICHEM_low_flow_year = -1, // 40054 int
+    ICHEM_low_flow_month = -1, // 40055 int
+    ICHEM_low_flow_day = -1, // 40056 int
+    ICHEM_low_flow_hour = -1, // 40057 int
+    ICHEM_low_flow_min = -1, // 40058 int
+    
+    ICHEM_pump_type = -1, // 40059 int
+    
+    ICHEM_time_based_pump_cycles = -1, // 40060 int
+    
+    
+        // Floats start at 100    
+    ICHEM_daily_volume = -1, // 40100 float rw
     ICHEM_daily_cycles = -1, // 40102 float
     ICHEM_injection_rate = -1, // 40104 float
     ICHEM_accum_cycle_vol = -1, // 40106 float
@@ -135,6 +252,67 @@ ICHEM <-
     ICHEM_month_volume = -1, // 40118 float
     ICHEM_year_volume = -1, // 40120 float
     ICHEM_forever_volume = -1, // 40122 float
+    
+    ICHEM_custom_batch_volume = -1, // 40124 float rw
+    ICHEM_remaining_batch_volume = -1, // 40126 float
+    ICHEM_cycle_countdown = -1, // 40128 float
+    ICHEM_cycle_duration = -1, // 40130 float
+    ICHEM_calc_cycle_difference = -1, // 40132 float
+    ICHEM_adj_target_cycle_volume = -1, // 40134 float
+    ICHEM_target_cycle_volume = -1, // 40136 float
+    ICHEM_current_battery_volts = -1, // 40138 float
+    ICHEM_batch_catch_volume = -1, // 40140 float
+    ICHEM_dynamic_unit_ratio = -1, // 40142 float rw
+    ICHEM_dynamic_chem_ratio = -1, // 40144 float rw
+    ICHEM_dynamic_calc_ratio = -1, // 40146 float
+    ICHEM_dynamic_rate = -1, // 40148 float rw
+    ICHEM_dynamic_max_injection_volume = -1, // 40150 float rw
+    ICHEM_dynamic_min_injection_volume = -1, // 40152 float rw
+    ICHEM_est_max_pump_output = -1, // 40154 float
+    ICHEM_production_unit_ext_override_hi_setpoint = -1, // 40156 float rw
+    ICHEM_production_unit_ext_override_lo_setpoint = -1, // 40158 float rw
+    
+        // ICHEM coils
+ 	ICHEMcoil_Manual_Mode = -1,	// coil 10000
+	ICHEMcoil_Start_Pump = -1,	// coil 10001
+	ICHEMcoil_Pump_Status = -1,	// coil 10002
+	ICHEMcoil_Low_Flow_Alarm_Disabled = -1,	// coil 10003
+	ICHEMcoil_Low_Flow_Alarm_Active = -1,	// coil 10004
+	ICHEMcoil_Low_Flow_Alarm_Reset = -1,	// coil 10005
+	ICHEMcoil_Reset_Yesterday_Vol = -1,	// coil 10006
+	ICHEMcoil_Reset_Week_Vol = -1,	// coil 10007
+	ICHEMcoil_Reset_Month_Vol = -1,	// coil 10008
+	ICHEMcoil_Reset_Year_Vol = -1,	// coil 10009
+	ICHEMcoil_Reset_Forever_Vol = -1,	// coil 10010
+	ICHEMcoil_Reserved = -1,	// coil 10011
+	ICHEMcoil_Set_1_Min_Cycle_Freq = -1,	// coil 10012
+	ICHEMcoil_Set_15_Min_Cycle_Freq = -1,	// coil 10013
+	ICHEMcoil_Set_30_Min_Cycle_Freq = -1,	// coil 10014
+	ICHEMcoil_Set_1_Hour_Cycle_Freq = -1,	// coil 10015
+	ICHEMcoil_Set_6_Hr_Cycle_Freq = -1,	// coil 10016
+	ICHEMcoil_Set_12_Hr_Cycle_Freq = -1,	// coil 10017
+	ICHEMcoil_Set_Daily_Cycle_Freq = -1,	// coil 10018
+	ICHEMcoil_Start_Custom_Batch = -1,	// coil 10019
+	ICHEMcoil_Stop_Custom_Batch = -1,	// coil 10020
+	ICHEMcoil_Low_Tank_Alert = -1,	// coil 10021
+	ICHEMcoil_Low_Battery_Alert = -1,	// coil 10022
+	ICHEMcoil_Low_Battery_Alarm = -1,	// coil 10023
+	ICHEMcoil_Low_Battery_Alarm_Reset = -1,	// coil 10024
+	ICHEMcoil_Digital_Output_Interface_Enabled = -1,	// coil 10025
+	ICHEMcoil_External_Override_Enabled = -1,	// coil 10026
+	ICHEMcoil_External_Override_Active = -1,	// coil 10027
+	ICHEMcoil_Hi_Flow_Alarm_Active = -1,	// coil 10028
+	ICHEMcoil_Start_Batch_Catch = -1,	// coil 10029
+	ICHEMcoil_Dynamic_Flow_Enabled = -1,	// coil 10030
+	ICHEMcoil_Dynamic_Max_Flow_Enabled = -1,	// coil 10031
+	ICHEMcoil_Dynamic_Min_Flow_Enabled = -1,	// coil 10032
+	ICHEMcoil_Production_Unit_External_Override_HI_Enalbed = -1,	// coil 10033
+	ICHEMcoil_Production_Unit_External_Override_LO_Enalbed = -1,	// coil 10034
+	ICHEMcoil_Production_Unit_External_Override_HI_Status = -1,	// coil 10035
+	ICHEMcoil_Production_Unit_External_Override_LO_Status = -1,	// coil 10036
+	ICHEMcoil_Recovery_with_Time_on_Low_Flow_Alarm_Enabled = -1,	// coil 10037
+	ICHEMcoil_Recovery_with_Time_on_Low_Flow_Alarm_Status = -1,	// coil 10038   
+    
 }
 
 // Defaults
@@ -232,6 +410,11 @@ function MB_tofloat32(register, offset, a)
             | (a[aloc + 2] << 8) | a[aloc + 3]);
 } // function MB_tofloat32(register, offset, a)
 
+function MB_coiltobit(coil, offset, a)
+{
+    
+}
+
 function MB_error_check(a)
 {
     // a[0] is physical addr byte
@@ -282,11 +465,11 @@ device.on(TIME_MARK_JAN14, function(a)
         MB_Device_Data.TimeMark_140127 <- TimeMark_140127;
     } else
     {
-/*            foreach (key, val in a)
+            foreach (key, val in a)
         {
             server.log("Time Mark New key: "+key+" val: "+val)
         }
-*/        
+        
             // Time Mark Fall 2014 release
         const TMoffset = -1;
         TimeMark.TM_onsec <- MB_toint16(0, TMoffset, a);
@@ -337,13 +520,95 @@ device.on(TIME_MARK_JAN14, function(a)
 } // end of function(data)
 ); // end device.on(TIME_MARK_JAN14, function(data)
 
+const TIME_MARK_JAN14_coils = "time_mark_jan14_coils";
+device.on(TIME_MARK_JAN14_coils, function(a)
+{
+
+    foreach (key, val in a)
+        {
+            server.log("Time Mark Coil key: "+key+" val: "+val)
+        }
+
+    if(MB_error_check(a) == 0)
+    {
+        return; // Found MB data error
+    }
+    
+    server.log("-- Coils found: "+a[2]+"; Coil Value: "+a[3]);
+     // Get coil bits
+        // bits are in bytes in the a array
+        // bits must be shifted off of each byte
+    local count = a[2];
+    local bits = array(8);
+    for(local cnt = 0; cnt < count; cnt++)
+    {
+        local byte = a[3 + cnt];
+        for(local i = 0; i < 8; i++)
+        {
+            bits[i] = (byte >> i) & 0x01;
+        }
+    }
+        
+        // dump bits
+        foreach(key, val in bits)
+        {
+            server.log("-- coil bits: key: "+key+"; val: "+val);
+        }
+
+        
+    // version number for Jan 14, 2014 = 140127
+ //   TimeMark_140127.MB_VersionNumber <- MB_toint32(14, 0, a);
+//    if(TimeMark_140127.MB_VersionNumber == 140127)
+    
+    // use bit7 to determine if coils are from 140127 or fall 2014
+    // bit7 is only 1 if fall 2014 because bit is unused for earlier
+    // version and is always 0. Also, we can never read the comm mode
+    // bit as 0 because that means the comm mode would be turned off
+    // and couldn't be read at all.
+    if(bits[7] == 0)
+    {
+        // This is older version
+        server.log("--* Found version 140127 coils!");
+
+            // coils
+        TimeMark_140127.MB_Auto_Manual_Mode = bits[0];	// coil 10000
+	    TimeMark_140127.MB_Timer_Mode = bits[1];	// coil 10001
+    	TimeMark_140127.MB_Temp_Mode = bits[2];	// coil 10002
+    	TimeMark_140127.MB_Comm_Mode = bits[3];	// coil 10003
+            // put the TimeMark data table in the MB_Device_Data table
+        MB_Device_Data.TimeMark_140127 <- TimeMark_140127;
+    } else
+    {
+        TimeMark.TM_Timer_Mode = bits[0]; // coil addr0
+	    TimeMark.TM_Temp_Mode = bits[1]; // coil addr1
+	    TimeMark.TM_Off_First = bits[2]; // 1 = off first addr2
+    	TimeMark.TM_Variable_Speed_Mode = bits[3]; // variable speed addr3
+	    TimeMark.TM_Auto_Manual_Mode = bits[4]; // Auto coil addr4
+	    TimeMark.TM_Aux_Mode = bits[5]; // Aux enable addr5
+    	TimeMark.TM_Reserved = bits[6]; // unused addr6
+    	TimeMark.TM_Comm_Mode = bits[7]; // Comm enable coil addr7
+            // put the TimeMark data table in the MB_Device_Data table
+        MB_Device_Data.TimeMark <- TimeMark;
+    }
+    
+} // end of function(data)
+); // end device.on(TIME_MARK_JAN14_coils, function(data)
+
 const MB_PT500_HREG = "MB_PT500_HREG";
 device.on(MB_PT500_HREG, function(data)
 {
+    if(MB_error_check(data) == 0)
+    {
+        server.log("ERROR in APG PT-500 hreg data package!")
+        return; // Found MB data error
+    }
+/*    
     foreach (key, val in data)
         {
             server.log("APG PT-500 hreg key: "+key+" val: "+val)
         }
+*/
+    
 } // end of function(data)
 ); // end device.on(MB_PT500_HREG, function(data)
 
@@ -387,7 +652,9 @@ device.on(MB_MPX_IREG, function(data)
     // Decode registers
     MPX.MPX_model <- MB_toint16(299, 298, data);
     MPX.MPX_topdist <- MB_toint16(300, 298, data);
+    MPX.MPX_topdistin <- MB_toint16(300, 298, data) / 25.4;
     MPX.MPX_botdist <- MB_toint16(301, 298, data);
+    MPX.MPX_botdistin <- MB_toint16(301, 298, data) / 25.4;
     MPX.MPX_tempC <- MB_toint16(302, 298, data);
     MPX.MPX_topcalc <- MB_toint32(303, 298, data);
     MPX.MPX_botcalc <- MB_toint32(305, 298, data);
@@ -408,7 +675,7 @@ device.on(ICHEM_HREG, function(data)
     {
         return; // Found MB data error
     }
-
+    // ICHEM integer data
     const ICHEMoffset = -1;
     ICHEM.ICHEM_month <- MB_toint16(2, ICHEMoffset, data); // 40002 int
     ICHEM.ICHEM_day <- MB_toint16(3, ICHEMoffset, data); // 40003 int
@@ -417,29 +684,326 @@ device.on(ICHEM_HREG, function(data)
     ICHEM.ICHEM_min<- MB_toint16(6, ICHEMoffset, data); // 40006 int
     ICHEM.ICHEM_sec <- MB_toint16(7, ICHEMoffset, data); // 40007 int
     
-    foreach (key, val in ICHEM)
-    {
-        server.log("agent ICHEM: "+key+": "+val);
-    }
+    ICHEM.ICHEM_last_flow_meter_cal_month <- MB_toint16(8, ICHEMoffset, data); // 40008 int
+    ICHEM.ICHEM_last_flow_meter_cal_day <- MB_toint16(9, ICHEMoffset, data); // 40009 int
+    ICHEM.ICHEM_last_flow_meter_cal_year <- MB_toint16(10, ICHEMoffset, data); // 40010 int
+    
+    ICHEM.ICHEM_MB_cycles_freq_bitmap <- MB_toint16(14, ICHEMoffset, data); // 40014 int
+    
+    ICHEM.ICHEM_last_cycle_freq_change_year  <- MB_toint16(15, ICHEMoffset, data); // 40015 int
+    ICHEM.ICHEM_last_cycle_freq_change_month  <- MB_toint16(16, ICHEMoffset, data); // 40016 int
+    ICHEM.ICHEM_last_cycle_freq_change_day <- MB_toint16(17, ICHEMoffset, data); // 40017 int
+
+    ICHEM.ICHEM_last_flow_meter_check_year <- MB_toint16(18, ICHEMoffset, data); // 40018 int
+    ICHEM.ICHEM_last_flow_meter_check_month <- MB_toint16(19, ICHEMoffset, data); // 40019 int
+    ICHEM.ICHEM_last_flow_meter_check_day <- MB_toint16(20, ICHEMoffset, data); // 40020 int
+    
+    ICHEM.ICHEM_last_volume_change_year <- MB_toint16(21, ICHEMoffset, data); // 40021 int
+    ICHEM.ICHEM_last_volume_change_month <- MB_toint16(22, ICHEMoffset, data); // 40022 int
+    ICHEM.ICHEM_last_volume_change_day <- MB_toint16(23, ICHEMoffset, data); // 40023 int
+    
+    ICHEM.ICHEM_completed_daily_cycles <- MB_toint16(24, ICHEMoffset, data); // 40024 int
+    ICHEM.ICHEM_pumped_daily_cycles <- MB_toint16(25, ICHEMoffset, data); // 40025 int
+    
+    ICHEM.ICHEM_manual_mode_entry_year <- MB_toint16(26, ICHEMoffset, data); // 40026 int
+    ICHEM.ICHEM_manual_mode_entry_month <- MB_toint16(27, ICHEMoffset, data); // 40027 int
+    ICHEM.ICHEM_manual_mode_entry_day <- MB_toint16(28, ICHEMoffset, data); // 40028 int
     
 /*    
-    ICHEM.ICHEM_daily_volume <- (data[19] << 8) | data[20]; // 40100 float
-    ICHEM.ICHEM_daily_cycles <- (data[3] << 8) | data[4]; // 40102 float
-    ICHEM.ICHEM_injection_rate <- (data[3] << 8) | data[4]; // 40104 float
-    ICHEM.ICHEM_accum_cycle_vol <- (data[3] << 8) | data[4]; // 40106 float
-    ICHEM.ICHEM_accum_daily_vol <- (data[3] << 8) | data[4]; // 40108 float
-    ICHEM.ICHEM_curr_tank_lev <- (data[3] << 8) | data[4]; // 40110 float
-    ICHEM.ICHEM_fm_k_factor <- (data[3] << 8) | data[4]; // 40112 float
-    ICHEM.ICHEM_yesterday_volume <- (data[3] << 8) | data[4]; // 40114 float
-    ICHEM.ICHEM_week_volume <- (data[3] << 8) | data[4]; // 40116 float
-    ICHEM.ICHEM_month_volume <- (data[3] << 8) | data[4]; // 40118 float
-    ICHEM.ICHEM_year_volume <- (data[3] << 8) | data[4]; // 40120 float
-    ICHEM.ICHEM_forever_volume <- (data[3] << 8) | data[4]; // 40122 float
-*/ 
+    foreach (key, val in ICHEM)
+    {
+        if(val > -1)
+        {
+            server.log("agent ICHEM: "+key+": "+val);
+        }
+    }
+*/    
     // put the ICHEM data table in the MB_Device_Data table
     MB_Device_Data.ICHEM <- ICHEM;
 } // end of function(data)
 ); // end device.on(ICHEM_HREG, function(data)
+
+
+const ICHEM_HREG1 = "iChem_hreg1";
+device.on(ICHEM_HREG1, function(data)
+{
+    server.log("-- agent ICHEM hreg1 data array length: "+data.len());
+    if(MB_error_check(data) == 0)
+    {
+        return; // Found MB data error
+    }
+    // ICHEM integer data
+    const ICHEMoffset = 28;
+    ICHEM.ICHEM_last_custom_batch_year <- MB_toint16(29, ICHEMoffset, data); // 40029 int
+    ICHEM.ICHEM_last_custom_batch_month <- MB_toint16(30, ICHEMoffset, data); // 40030 int
+    ICHEM.ICHEM_last_custom_batch_day <- MB_toint16(31, ICHEMoffset, data); // 40031 int
+    
+    ICHEM.ICHEM_ext_sys_override_year <- MB_toint16(32, ICHEMoffset, data); // 40032 int
+    ICHEM.ICHEM_ext_sys_override_month <- MB_toint16(33, ICHEMoffset, data); // 40033 int
+    ICHEM.ICHEM_ext_sys_override_day <- MB_toint16(34, ICHEMoffset, data); // 40034 int
+    
+    ICHEM.ICHEM_sys_fail_year <- MB_toint16(35, ICHEMoffset, data); // 40035 int
+    ICHEM.ICHEM_sys_fail_month <- MB_toint16(36, ICHEMoffset, data); // 40036 int
+    ICHEM.ICHEM_sys_fail_day <- MB_toint16(37, ICHEMoffset, data); // 40037 int
+    
+    ICHEM.ICHEM_battery_alert_year <- MB_toint16(38, ICHEMoffset, data); // 40038 int
+    ICHEM.ICHEM_battery_alert_month <- MB_toint16(39, ICHEMoffset, data); // 40039 int
+    ICHEM.ICHEM_battery_alert_day <- MB_toint16(40, ICHEMoffset, data); // 40040 int
+    ICHEM.ICHEM_battery_alert_hour <- MB_toint16(41, ICHEMoffset, data); // 40041 int
+    ICHEM.ICHEM_battery_alert_min <- MB_toint16(42, ICHEMoffset, data); // 40042 int
+    
+    ICHEM.ICHEM_battery_alarm_year <- MB_toint16(43, ICHEMoffset, data); // 40043 int
+    ICHEM.ICHEM_battery_alarm_month <- MB_toint16(44, ICHEMoffset, data); // 40044 int
+    ICHEM.ICHEM_battery_alarm_day <- MB_toint16(45, ICHEMoffset, data); // 40045 int
+    ICHEM.ICHEM_battery_alarm_hour <- MB_toint16(46, ICHEMoffset, data); // 40046 int
+    ICHEM.ICHEM_battery_alarm_min <- MB_toint16(47, ICHEMoffset, data); // 40047 int
+    
+    ICHEM.ICHEM_low_tank_year <- MB_toint16(48, ICHEMoffset, data); // 40048 int
+    ICHEM.ICHEM_low_tank_month <- MB_toint16(49, ICHEMoffset, data); // 40049 int
+    ICHEM.ICHEM_low_tank_day <- MB_toint16(50, ICHEMoffset, data); // 40050 int
+    
+    ICHEM.ICHEM_hi_flow_year <- MB_toint16(51, ICHEMoffset, data); // 40051 int
+    ICHEM.ICHEM_hi_flow_month <- MB_toint16(52, ICHEMoffset, data); // 40052 int
+    ICHEM.ICHEM_hi_flow_day <- MB_toint16(53, ICHEMoffset, data); // 40053 int
+    
+    ICHEM.ICHEM_low_flow_year <- MB_toint16(54, ICHEMoffset, data); // 40054 int
+    ICHEM.ICHEM_low_flow_month <- MB_toint16(55, ICHEMoffset, data); // 40055 int
+    ICHEM.ICHEM_low_flow_day <- MB_toint16(56, ICHEMoffset, data); // 40056 int
+    ICHEM.ICHEM_low_flow_hour <- MB_toint16(57, ICHEMoffset, data); // 40057 int
+    ICHEM.ICHEM_low_flow_min <- MB_toint16(58, ICHEMoffset, data); // 40058 int
+    
+    ICHEM.ICHEM_pump_type <- MB_toint16(59, ICHEMoffset, data); // 40059 int
+    
+    ICHEM.ICHEM_time_based_pump_cycles <- MB_toint16(60, ICHEMoffset, data); // 40060 int
+    
+/*    
+    foreach (key, val in ICHEM)
+    {
+        if(val > -1)
+        {
+            server.log("agent ICHEM: "+key+": "+val);
+        }
+    }
+*/    
+    // put the ICHEM data table in the MB_Device_Data table
+    MB_Device_Data.ICHEM <- ICHEM;
+} // end of function(data)
+); // end device.on(ICHEM_HREG, function(data)
+
+
+const ICHEM_HREGfloat = "iChem_hreg_float";
+device.on(ICHEM_HREGfloat, function(data)
+{
+    server.log("-- agent ICHEM float data array length: "+data.len());
+    if(MB_error_check(data) == 0)
+    {
+        return; // Found MB data error
+    }
+/*
+    foreach (key, val in data)
+    {
+       server.log("APG MPX ireg key: "+key+" val: "+val)
+    }
+*/
+    const ICHEMoffset = 98;
+    
+         // Floats start at 100    
+    ICHEM.ICHEM_daily_volume <- MB_tofloat32(100, ICHEMoffset, data); // 40100 float rw
+    ICHEM.ICHEM_daily_cycles <- MB_tofloat32(102, ICHEMoffset, data); // 40102 float
+    ICHEM.ICHEM_injection_rate <- MB_tofloat32(104, ICHEMoffset, data); // 40104 float
+    ICHEM.ICHEM_accum_cycle_vol <- MB_tofloat32(106, ICHEMoffset, data); // 40106 float
+    ICHEM.ICHEM_accum_daily_vol <- MB_tofloat32(108, ICHEMoffset, data); // 40108 float
+    ICHEM.ICHEM_curr_tank_lev <- MB_tofloat32(110, ICHEMoffset, data); // 40110 float
+    ICHEM.ICHEM_fm_k_factor <- MB_tofloat32(112, ICHEMoffset, data); // 40112 float
+    ICHEM.ICHEM_yesterday_volume <- MB_tofloat32(114, ICHEMoffset, data); // 40114 float
+    ICHEM.ICHEM_week_volume <- MB_tofloat32(116, ICHEMoffset, data); // 40116 float
+    ICHEM.ICHEM_month_volume <- MB_tofloat32(118, ICHEMoffset, data); // 40118 float
+    ICHEM.ICHEM_year_volume <- MB_tofloat32(120, ICHEMoffset, data); // 40120 float
+    ICHEM.ICHEM_forever_volume <- MB_tofloat32(122, ICHEMoffset, data); // 40122 float
+    
+    ICHEM.ICHEM_custom_batch_volume <- MB_tofloat32(124, ICHEMoffset, data); // 40124 float rw
+    ICHEM.ICHEM_remaining_batch_volume <- MB_tofloat32(126, ICHEMoffset, data); // 40126 float
+    ICHEM.ICHEM_cycle_countdown <- MB_tofloat32(128, ICHEMoffset, data); // 40128 float
+    ICHEM.ICHEM_cycle_duration <- MB_tofloat32(130, ICHEMoffset, data); // 40130 float
+    ICHEM.ICHEM_calc_cycle_difference <- MB_tofloat32(132, ICHEMoffset, data); // 40132 float
+    ICHEM.ICHEM_adj_target_cycle_volume <- MB_tofloat32(134, ICHEMoffset, data); // 40134 float
+    ICHEM.ICHEM_target_cycle_volume <- MB_tofloat32(136, ICHEMoffset, data); // 40136 float
+    ICHEM.ICHEM_current_battery_volts <- MB_tofloat32(138, ICHEMoffset, data); // 40138 float
+    ICHEM.ICHEM_batch_catch_volume <- MB_tofloat32(140, ICHEMoffset, data); // 40140 float
+    ICHEM.ICHEM_dynamic_unit_ratio <- MB_tofloat32(142, ICHEMoffset, data); // 40142 float rw
+    ICHEM.ICHEM_dynamic_chem_ratio <- MB_tofloat32(144, ICHEMoffset, data); // 40144 float rw
+    ICHEM.ICHEM_dynamic_calc_ratio <- MB_tofloat32(146, ICHEMoffset, data); // 40146 float
+    ICHEM.ICHEM_dynamic_rate <- MB_tofloat32(148, ICHEMoffset, data); // 40148 float rw
+    ICHEM.ICHEM_dynamic_max_injection_volume <- MB_tofloat32(150, ICHEMoffset, data); // 40150 float rw
+    ICHEM.ICHEM_dynamic_min_injection_volume <- MB_tofloat32(152, ICHEMoffset, data); // 40152 float rw
+    ICHEM.ICHEM_est_max_pump_output <- MB_tofloat32(154, ICHEMoffset, data); // 40154 float
+    ICHEM.ICHEM_production_unit_ext_override_hi_setpoint <- MB_tofloat32(156, ICHEMoffset, data); // 40156 float rw
+    ICHEM.ICHEM_production_unit_ext_override_lo_setpoint <- MB_tofloat32(158, ICHEMoffset, data); // 40158 float rw
+/*    
+    foreach (key, val in ICHEM)
+    {
+        if(val > -1)
+        {
+ //           server.log("agent ICHEM float: "+key+": "+val);
+        }
+    }
+*/    
+    // put the ICHEM data table in the MB_Device_Data table
+    MB_Device_Data.ICHEM <- ICHEM;
+} // end of function(data)
+); // end device.on(ICHEM_HREG, function(data)
+
+const ICHEM_HREGfloat1 = "iChem_hreg_float1";
+device.on(ICHEM_HREGfloat1, function(data)
+{
+    server.log("-- agent ICHEM float1 data array length: "+data.len());
+    if(MB_error_check(data) == 0)
+    {
+        return; // Found MB data error
+    }
+/*
+    foreach (key, val in data)
+    {
+       server.log("APG MPX ireg key: "+key+" val: "+val)
+    }
+*/
+    const ICHEMoffset = 130;
+    
+         // Floats start at 100    
+/*
+    ICHEM.ICHEM_daily_volume <- MB_tofloat32(100, ICHEMoffset, data); // 40100 float rw
+    ICHEM.ICHEM_daily_cycles <- MB_tofloat32(102, ICHEMoffset, data); // 40102 float
+    ICHEM.ICHEM_injection_rate <- MB_tofloat32(104, ICHEMoffset, data); // 40104 float
+    ICHEM.ICHEM_accum_cycle_vol <- MB_tofloat32(106, ICHEMoffset, data); // 40106 float
+    ICHEM.ICHEM_accum_daily_vol <- MB_tofloat32(108, ICHEMoffset, data); // 40108 float
+    ICHEM.ICHEM_curr_tank_lev <- MB_tofloat32(110, ICHEMoffset, data); // 40110 float
+    ICHEM.ICHEM_fm_k_factor <- MB_tofloat32(112, ICHEMoffset, data); // 40112 float
+    ICHEM.ICHEM_yesterday_volume <- MB_tofloat32(114, ICHEMoffset, data); // 40114 float
+    ICHEM.ICHEM_week_volume <- MB_tofloat32(116, ICHEMoffset, data); // 40116 float
+    ICHEM.ICHEM_month_volume <- MB_tofloat32(118, ICHEMoffset, data); // 40118 float
+    ICHEM.ICHEM_year_volume <- MB_tofloat32(120, ICHEMoffset, data); // 40120 float
+    ICHEM.ICHEM_forever_volume <- MB_tofloat32(122, ICHEMoffset, data); // 40122 float
+    
+    ICHEM.ICHEM_custom_batch_volume <- MB_tofloat32(124, ICHEMoffset, data); // 40124 float rw
+    ICHEM.ICHEM_remaining_batch_volume <- MB_tofloat32(126, ICHEMoffset, data); // 40126 float
+    ICHEM.ICHEM_cycle_countdown <- MB_tofloat32(128, ICHEMoffset, data); // 40128 float
+    ICHEM.ICHEM_cycle_duration <- MB_tofloat32(130, ICHEMoffset, data); // 40130 float
+  */  
+    
+    ICHEM.ICHEM_calc_cycle_difference <- MB_tofloat32(132, ICHEMoffset, data); // 40132 float
+    ICHEM.ICHEM_adj_target_cycle_volume <- MB_tofloat32(134, ICHEMoffset, data); // 40134 float
+    ICHEM.ICHEM_target_cycle_volume <- MB_tofloat32(136, ICHEMoffset, data); // 40136 float
+    ICHEM.ICHEM_current_battery_volts <- MB_tofloat32(138, ICHEMoffset, data); // 40138 float
+    ICHEM.ICHEM_batch_catch_volume <- MB_tofloat32(140, ICHEMoffset, data); // 40140 float
+    ICHEM.ICHEM_dynamic_unit_ratio <- MB_tofloat32(142, ICHEMoffset, data); // 40142 float rw
+    ICHEM.ICHEM_dynamic_chem_ratio <- MB_tofloat32(144, ICHEMoffset, data); // 40144 float rw
+    ICHEM.ICHEM_dynamic_calc_ratio <- MB_tofloat32(146, ICHEMoffset, data); // 40146 float
+    ICHEM.ICHEM_dynamic_rate <- MB_tofloat32(148, ICHEMoffset, data); // 40148 float rw
+    ICHEM.ICHEM_dynamic_max_injection_volume <- MB_tofloat32(150, ICHEMoffset, data); // 40150 float rw
+    ICHEM.ICHEM_dynamic_min_injection_volume <- MB_tofloat32(152, ICHEMoffset, data); // 40152 float rw
+    ICHEM.ICHEM_est_max_pump_output <- MB_tofloat32(154, ICHEMoffset, data); // 40154 float
+    ICHEM.ICHEM_production_unit_ext_override_hi_setpoint <- MB_tofloat32(156, ICHEMoffset, data); // 40156 float rw
+    ICHEM.ICHEM_production_unit_ext_override_lo_setpoint <- MB_tofloat32(158, ICHEMoffset, data); // 40158 float rw
+/*    
+    foreach (key, val in ICHEM)
+    {
+        if(val > -1)
+        {
+            server.log("agent ICHEM float1: "+key+": "+val);
+        }
+    }
+*/    
+    // put the ICHEM data table in the MB_Device_Data table
+    MB_Device_Data.ICHEM <- ICHEM;
+} // end of function(data)
+); // end device.on(ICHEM_HREG, function(data)
+
+
+const ICHEM_coils = "iChem_coils";
+device.on(ICHEM_coils, function(a)
+{
+/*
+    foreach (key, val in a)
+        {
+            server.log("Time Mark Coil key: "+key+" val: "+val)
+        }
+*/
+    if(MB_error_check(a) == 0)
+    {
+        return; // Found MB data error
+    }
+
+        server.log("-- ICHEM Coils found: "+a[2]+"; Coil Value: "+a[3]);
+        
+
+        // Get coil bits
+        // bits are in bytes in the a array
+        // bits must be shifted off of each byte
+        local count = a[2];
+        local bits = array(40);
+        for(local cnt = 0; cnt < count; cnt++)
+        {
+            local byte = a[3 + cnt]; // grab the byte
+            for(local i = 0; i < 8; i++) // go thru bits
+            {
+                bits[i+(cnt*8)] = (byte >> i) & 0x01;
+            }
+        }
+        
+        ICHEM.ICHEMcoil_Manual_Mode = bits[0];	// coil 10000
+	    ICHEM.ICHEMcoil_Start_Pump = bits[1];	// coil 10001
+    	ICHEM.ICHEMcoil_Pump_Status = bits[2];	// coil 10002
+    	ICHEM.ICHEMcoil_Low_Flow_Alarm_Disabled = bits[3];	// coil 10003
+    	ICHEM.ICHEMcoil_Low_Flow_Alarm_Active = bits[4];	// coil 10004
+    	ICHEM.ICHEMcoil_Low_Flow_Alarm_Reset = bits[5];	// coil 10005
+    	ICHEM.ICHEMcoil_Reset_Yesterday_Vol = bits[6];	// coil 10006
+	    ICHEM.ICHEMcoil_Reset_Week_Vol = bits[7];	// coil 10007
+    	ICHEM.ICHEMcoil_Reset_Month_Vol = bits[8];	// coil 10008
+    	ICHEM.ICHEMcoil_Reset_Year_Vol = bits[9];	// coil 10009
+    	ICHEM.ICHEMcoil_Reset_Forever_Vol = bits[10];	// coil 10010
+    	ICHEM.ICHEMcoil_Reserved = bits[11];	// coil 10011
+    	ICHEM.ICHEMcoil_Set_1_Min_Cycle_Freq = bits[12];	// coil 10012
+    	ICHEM.ICHEMcoil_Set_15_Min_Cycle_Freq = bits[13];	// coil 10013
+    	ICHEM.ICHEMcoil_Set_30_Min_Cycle_Freq = bits[14];	// coil 10014
+    	ICHEM.ICHEMcoil_Set_1_Hour_Cycle_Freq = bits[15];	// coil 10015
+    	ICHEM.ICHEMcoil_Set_6_Hr_Cycle_Freq = bits[16];	// coil 10016
+    	ICHEM.ICHEMcoil_Set_12_Hr_Cycle_Freq = bits[17];	// coil 10017
+    	ICHEM.ICHEMcoil_Set_Daily_Cycle_Freq = bits[18];	// coil 10018
+    	ICHEM.ICHEMcoil_Start_Custom_Batch = bits[19];	// coil 10019
+    	ICHEM.ICHEMcoil_Stop_Custom_Batch = bits[20];	// coil 10020
+    	ICHEM.ICHEMcoil_Low_Tank_Alert = bits[21];	// coil 10021
+    	ICHEM.ICHEMcoil_Low_Battery_Alert = bits[22];	// coil 10022
+    	ICHEM.ICHEMcoil_Low_Battery_Alarm = bits[23];	// coil 10023
+    	ICHEM.ICHEMcoil_Low_Battery_Alarm_Reset = bits[24];	// coil 10024
+    	ICHEM.ICHEMcoil_Digital_Output_Interface_Enabled = bits[25];	// coil 10025
+    	ICHEM.ICHEMcoil_External_Override_Enabled = bits[26];	// coil 10026
+    	ICHEM.ICHEMcoil_External_Override_Active = bits[27];	// coil 10027
+    	ICHEM.ICHEMcoil_Hi_Flow_Alarm_Active = bits[28];	// coil 10028
+    	ICHEM.ICHEMcoil_Start_Batch_Catch = bits[29];	// coil 10029
+    	ICHEM.ICHEMcoil_Dynamic_Flow_Enabled = bits[30];	// coil 10030
+    	ICHEM.ICHEMcoil_Dynamic_Max_Flow_Enabled = bits[31];	// coil 10031
+    	ICHEM.ICHEMcoil_Dynamic_Min_Flow_Enabled = bits[32];	// coil 10032
+    	ICHEM.ICHEMcoil_Production_Unit_External_Override_HI_Enalbed = bits[33];	// coil 10033
+    	ICHEM.ICHEMcoil_Production_Unit_External_Override_LO_Enalbed = bits[34];	// coil 10034
+    	ICHEM.ICHEMcoil_Production_Unit_External_Override_HI_Status = bits[35];	// coil 10035
+    	ICHEM.ICHEMcoil_Production_Unit_External_Override_LO_Status = bits[36];	// coil 10036
+    	ICHEM.ICHEMcoil_Recovery_with_Time_on_Low_Flow_Alarm_Enabled = bits[37];	// coil 10037
+    	ICHEM.ICHEMcoil_Recovery_with_Time_on_Low_Flow_Alarm_Status = bits[38];	// coil 10038
+/*       
+        // dump bits
+        foreach(key, val in bits)
+        {
+            server.log("-- coil bits: key: "+key+"; val: "+val);
+        }
+*/        
+//        TimeMark_140127.MB_Comm_Mode = bits[3];
+        
+    // put the ICHEM data table in the MB_Device_Data table
+    MB_Device_Data.ICHEM <- ICHEM;
+    
+} // end of function(data)
+); // end device.on(TIME_MARK_JAN14_coils, function(data)
+
 
 // Get meta data from the device, which includes the
 // impID and ssid information
@@ -545,11 +1109,13 @@ pvolttest key: 1417952870; value 0.554026
                 
                 // list of other data
                     // place other data in report_data string
+/*                    
                     if (key.find("wakewhy") != null)
                     {   // wakewhy is a numeric code 1 - 8
                         // look up the string in the table
                         val = val + ": " + impWakeCodes[val];
                     }
+*/                    
                     report_data += key+", "+val+"\n";
                     makecsv += key+", "+val+"\n";
             }
