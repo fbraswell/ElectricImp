@@ -41,9 +41,10 @@ const MODBUS = "modbus";
  MB_ADDR_PT500 <- 0x01;
  MB_ADDR_MPX <- 0x01;
  MB_ADDR_ICHEM <- 0x02;
+ MB_ADDR_ICHEMfloat <- 0x02;
  
 // Model for MPX is 5
-MB_MODEL_MPX <- 5;
+MB_MODEL_MPX <-  5;
 // Model for PT-500 is 9
 MB_MODEL_PT500 <- 9;
 
@@ -291,10 +292,9 @@ function calculateCRC ( puchMsg, usDataLen )
 function readMB()
 {
     HW_ModBusDir.write(MBread);
-    imp.sleep(10.0/1000.0); // wait for response
+    imp.sleep(50.0/1000.0); // wait for response
     
     local byte = -1;
-    // The a stands for all bytes but I didn't want to type it out so many times.
     local MBbytes = [];
         // Read MB register data from UART
     while ((byte = HW_MBUart1.read()) != -1)
@@ -379,12 +379,37 @@ function MBwriteSingleCoil(MBaddr, coilAddr, coilValue)
     return readMB();
 } // function MBwriteSingleCoil()
 
+
+// Read MB coils - code 1
+// return the MB response
+function MBreadMultipleCoils(MBaddr, startAddr, qtyCoils)
+{
+        // MB command: MBaddr byte, MBcode byte, start addr word, quantity word
+    // upper and lower bytes
+    local ubs, lbs, ube, lbe;
+    ubs = startAddr >> 8;
+    lbs = startAddr & 0x00ff;
+    ube = qtyCoils >> 8;
+    lbe = qtyCoils & 0x00ff;
+//    server.log("Input upper st "+ubs+"; lower st "+lbs+
+//                "; upper end "+ube+"; lower end "+lbe);
+    local MBcmd = [MBaddr, MB_ReadCoil
+                    // Big Endian MSByte first
+                    // assume for now, MSByte is 0
+                    ubs, lbs, 
+                    // 0, startAddr,
+                    ube, lbe];
+                    // 0, endAddr];
+    writeMB(MBcmd);
+    return readMB();
+} // function MBreadMultipleCoils(MBaddr, startAddr, qtyCoils)
+
 // Read MB holding registers - code 3
 // return the MB response
 
 function MBreadInputRegisters(MBaddr, startAddr, endAddr)
 {
-        // MB command: MBaddr byte, MBcode byte, start addr word, end addr word
+    // MB command: MBaddr byte, MBcode byte, start addr word, end addr word
     // upper and lower bytes
     local ubs, lbs, ube, lbe;
     ubs = startAddr >> 8;
@@ -454,6 +479,33 @@ function logMB_TimeMark()
 //        MB_ADDR_TimeMark = -1;
     }
 } // function logMB_TimeMark() 
+
+// Get Modbus coil register data & decode it
+function logMBcoils_TimeMark() 
+{
+    // If MB communication not working, quit trying after 
+    // MB_timesfound tries
+    if (nv.MB_ADDR_TimeMarkCoils_Found < nv.MB_timesfound) return;
+
+    // The a stands for all bytes but I didn't want to type it out so many times.
+    local a = [ ];
+    a = MBreadMultipleCoils(MB_ADDR_TimeMark, 0, 8);
+    
+    // Some of these are supposed to be unsigned.  Are those being read correctly?
+    if (a.len() > 2) 
+    {   
+        nv.MB_ADDR_TimeMarkCoils_Found++; // Found TM Modbus data
+        // MB Data available in the array
+        const TIME_MARK_JAN14_coils = "time_mark_jan14_coils";
+        agent.send(TIME_MARK_JAN14_coils, a); // Send raw data to Agent
+        
+    } else 
+    {   // no data in MB array
+        server.log("Can't read Time Mark MODBUS Coils!");
+        nv.MB_ADDR_TimeMarkCoils_Found--; // Didn't find TM Modbus data
+//        MB_ADDR_TimeMark = -1;
+    }
+} // function logMBcoils_TimeMark() 
 //*************************************************
 
 // APG PT-500 Modbus Holding Registers Handler
@@ -465,7 +517,7 @@ function logMB_APG()
 
     // The a stands for all bytes but I didn't want to type it out so many times.
     local a = [ ];
-    a = MBreadHoldingRegisters(1, 400, 20);
+    a = MBreadHoldingRegisters(MB_ADDR_PT500, 400, 20);
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
     if (a.len() > 8) 
@@ -584,7 +636,7 @@ function logMB_ICHEM()
 
     // The a stands for all bytes but I didn't want to type it out so many times.
     local a = [ ];
-    a = MBreadHoldingRegisters(MB_ADDR_ICHEM, 0, 40);
+    a = MBreadHoldingRegisters(MB_ADDR_ICHEM, 0, 30);
     
     // Some of these are supposed to be unsigned.  Are those being read correctly?
     if (a.len() > 8) 
@@ -595,7 +647,7 @@ function logMB_ICHEM()
         agent.send(ICHEM_HREG, a); // Send raw data to Agent
         
         // MB Data available in the array
-        server.log("-- ICHEM data array length: "+a.len());
+//        server.log("-- ICHEM data array length: "+a.len());
 //        server.log(format("== APG Dev addr: %d; Units: %d; App type: %d; a[3]: %d", a[0], a[1], a[2], a[3]));   
 //        foreach (key, val in a)
 //        {
@@ -608,6 +660,133 @@ function logMB_ICHEM()
         nv.MB_ADDR_ICHEM_Found--; // Didn't find ICHEM Modbus Data
     }
 } // function logMB_ICHEM() 
+
+// ICHEM Modbus Handler - Holding Registers
+function logMB_ICHEM1() 
+{
+    // If MB communication not working, quit trying after 
+    // MB_timesfound tries
+    if (nv.MB_ADDR_ICHEM1_Found < nv.MB_timesfound) return; 
+
+    // The a stands for all bytes but I didn't want to type it out so many times.
+    local a = [ ];
+    a = MBreadHoldingRegisters(MB_ADDR_ICHEM, 29, 60);
+    
+    // Some of these are supposed to be unsigned.  Are those being read correctly?
+    if (a.len() > 8) 
+    {   
+        nv.MB_ADDR_ICHEM1_Found++; // Found ICHEM Modbus Data
+        
+        const ICHEM_HREG1 = "iChem_hreg1";
+        agent.send(ICHEM_HREG1, a); // Send raw data to Agent
+        
+        // MB Data available in the array
+//        server.log("-- ICHEM data array length: "+a.len());
+//        server.log(format("== APG Dev addr: %d; Units: %d; App type: %d; a[3]: %d", a[0], a[1], a[2], a[3]));   
+//        foreach (key, val in a)
+//        {
+//            server.log("device ICHEM key: "+key+" val: "+val)
+//        }
+     
+    } else 
+    {   // no data in APG MB array
+        server.log("Can't read ICHEM 1 MODBUS registers!");
+        nv.MB_ADDR_ICHEM1_Found--; // Didn't find ICHEM Modbus Data
+    }
+} // function logMB_ICHEM() 
+
+function logMB_ICHEMfloat() 
+{
+    // If MB communication not working, quit trying after 
+    // MB_timesfound tries
+    if (nv.MB_ADDR_ICHEMfloat_Found < nv.MB_timesfound) return; 
+
+    // The a stands for all bytes but I didn't want to type it out so many times.
+    local a = [ ];
+    a = MBreadHoldingRegisters(MB_ADDR_ICHEMfloat, 100, 100);
+    
+    // Some of these are supposed to be unsigned.  Are those being read correctly?
+    if (a.len() > 8) 
+    {   
+        nv.MB_ADDR_ICHEMfloat_Found++; // Found ICHEM Modbus Data
+        
+        const ICHEM_HREGfloat = "iChem_hreg_float";
+        agent.send(ICHEM_HREGfloat, a); // Send raw data to Agent
+        
+        // MB Data available in the array
+//        server.log("-- ICHEM float data array length: "+a.len());
+//        server.log(format("== APG Dev addr: %d; Units: %d; App type: %d; a[3]: %d", a[0], a[1], a[2], a[3]));   
+//        foreach (key, val in a)
+//        {
+//            server.log("device ICHEM key: "+key+" val: "+val)
+//        }
+     
+    } else 
+    {   // no data in APG MB array
+        server.log("Can't read ICHEM float MODBUS registers!");
+        nv.MB_ADDR_ICHEMfloat_Found--; // Didn't find ICHEM Modbus Data
+    }
+} // function logMB_ICHEMfloat() 
+
+function logMB_ICHEMfloat1() 
+{
+    // If MB communication not working, quit trying after 
+    // MB_timesfound tries
+    if (nv.MB_ADDR_ICHEMfloat1_Found < nv.MB_timesfound) return; 
+
+    // The a stands for all bytes but I didn't want to type it out so many times.
+    local a = [ ];
+    a = MBreadHoldingRegisters(MB_ADDR_ICHEMfloat, 132, 100);
+    
+    // Some of these are supposed to be unsigned.  Are those being read correctly?
+    if (a.len() > 8) 
+    {   
+        nv.MB_ADDR_ICHEMfloat1_Found++; // Found ICHEM Modbus Data
+        
+        const ICHEM_HREGfloat1 = "iChem_hreg_float1";
+        agent.send(ICHEM_HREGfloat1, a); // Send raw data to Agent
+        
+        // MB Data available in the array
+//        server.log("-- ICHEM float1 data array length: "+a.len());
+//        server.log(format("== APG Dev addr: %d; Units: %d; App type: %d; a[3]: %d", a[0], a[1], a[2], a[3]));   
+//        foreach (key, val in a)
+//        {
+//            server.log("device ICHEM key: "+key+" val: "+val)
+//        }
+     
+    } else 
+    {   // no data in APG MB array
+        server.log("Can't read ICHEM float1 MODBUS registers!");
+        nv.MB_ADDR_ICHEMfloat1_Found--; // Didn't find ICHEM Modbus Data
+    }
+} // function logMB_ICHEMfloat1() 
+
+// Get Modbus coil register data & decode it
+function logMB_ICHEMcoils() 
+{
+    // If MB communication not working, quit trying after 
+    // MB_timesfound tries
+    if (nv.MB_ADDR_ICHEMcoils_Found < nv.MB_timesfound) return;
+
+    // The a stands for all bytes but I didn't want to type it out so many times.
+    local a = [ ];
+    a = MBreadMultipleCoils(MB_ADDR_ICHEM, 0, 40);
+    
+    // Some of these are supposed to be unsigned.  Are those being read correctly?
+    if (a.len() > 2) 
+    {   
+        nv.MB_ADDR_ICHEMcoils_Found++; // Found TM Modbus data
+        // MB Data available in the array
+        const ICHEM_coils = "iChem_coils";
+        agent.send(ICHEM_coils, a); // Send raw data to Agent
+        
+    } else 
+    {   // no data in MB array
+        server.log("Can't read ICHEM MODBUS Coils!");
+        nv.MB_ADDR_ICHEMcoils_Found--; // Didn't find TM Modbus data
+//        MB_ADDR_TimeMark = -1;
+    }
+} // function logMB_ICHEMcoils() 
 
 // Try to locate Modbus devices by cycling through addresses
 // and looking for a response
@@ -890,34 +1069,47 @@ function dispatch()
           findMB();  
         }
 
-       server.log(format("** TimeMark: %d; PT-500: %d; MPX: %d; ICHEM: %d", 
-                      nv.MB_ADDR_TimeMark_Found, nv.MB_ADDR_PT500_Found
-                      nv.MB_ADDR_MPX_Found, nv.MB_ADDR_ICHEM_Found))
+       server.log(format("** TimeMark: %d; TimeMark coils: %d; PT-500: %d; MPX: %d; \nICHEM: %d; ICHEM1: %d; ICHEMfloat: %d; ICHEMfloat1: %d; ICHEMcoils: %d", 
+                      nv.MB_ADDR_TimeMark_Found,
+                      nv.MB_ADDR_TimeMarkCoils_Found,
+                      nv.MB_ADDR_PT500_Found,
+                      nv.MB_ADDR_MPX_Found, 
+                      nv.MB_ADDR_ICHEM_Found,
+                      nv.MB_ADDR_ICHEM1_Found,
+                      nv.MB_ADDR_ICHEMfloat_Found,
+                      nv.MB_ADDR_ICHEMfloat1_Found,
+                      nv.MB_ADDR_ICHEMcoils_Found));
+                      
+        str = "";
  
         // Give the Modbus test several tries before
         // shutting it off
- //       if (MB_ADDR_TimeMark_Found >= -5)
- //       {
+
             logMB_TimeMark(); // sample MB registers
-//        }
-//        logMB_APG();
-        imp.sleep( 0.5 );
+            
+            logMBcoils_TimeMark(); // read old TM coils
+
+//        imp.sleep( 0.5 );
         
-//        if (MB_ADDR_PT500_Found >= -5)
-//        {
             logMB_APG_ireg();
-//        }
-        imp.sleep( 0.5 );
+            
+//        imp.sleep( 0.5 );
+            
+            logMB_APG();
+
+//        imp.sleep( 0.5 );
         
-//        if(MB_ADDR_MPX_Found >= -5)
-//        {
             logMB_MPX_ireg();
-//        }
-//        logMB_ICHEM();
- //       if(MB_ADDR_ICHEM_Found >= -5)
-//        {
+
             logMB_ICHEM();
-//        }
+            
+            logMB_ICHEM1();
+            
+            logMB_ICHEMfloat();
+            
+            logMB_ICHEMfloat1();
+            
+            logMB_ICHEMcoils();
 
         logpressure(); 
     } else if (nv.PUMP == TRANSDUCER_MODE)
@@ -986,9 +1178,14 @@ if (!("nv" in getroottable()))
             Analog1Volts_switch = 0, // switch starts at off
             
             MB_ADDR_TimeMark_Found = 0,
+            MB_ADDR_TimeMarkCoils_Found = 0,
             MB_ADDR_PT500_Found = 0,
             MB_ADDR_MPX_Found  = 0,
             MB_ADDR_ICHEM_Found = 0,
+            MB_ADDR_ICHEM1_Found = 0,
+            MB_ADDR_ICHEMfloat_Found = 0,
+            MB_ADDR_ICHEMfloat1_Found = 0,
+            MB_ADDR_ICHEMcoils_Found = 0,
  
             MB_timesfound = -5,
         };
