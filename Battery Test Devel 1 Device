@@ -142,6 +142,59 @@ Code    Description
     8   "Hardware reset"
 */
 
+ICHEMrw <-
+{
+          // Floats start at 100    
+    Set_ICHEM_daily_volume = 40100, // 40100 float - RW
+
+    Set_ICHEM_custom_batch_volume = 40124, // 40124 float - RW
+    
+    Set_ICHEM_dynamic_unit_ratio = 40142, // 40142 float - RW
+    Set_ICHEM_dynamic_chem_ratio = 40144, // 40144 float - RW
+
+    Set_ICHEM_dynamic_rate = 40148, // 40148 float - RW
+    Set_ICHEM_dynamic_max_injection_volume = 40150, // 40150 float - RW
+    Set_ICHEM_dynamic_min_injection_volume = 40152, // 40152 float - RW
+
+    Set_ICHEM_production_unit_ext_override_hi_setpoint = 40156, // 40156 float - RW
+    Set_ICHEM_production_unit_ext_override_lo_setpoint = 40158, // 40158 float - RW
+    
+        // Set_ICHEM coils
+ 	Set_ICHEMcoil_Manual_Mode = 10000,	// coil 10000 - RW
+	Set_ICHEMcoil_Start_Pump = 10001,	// coil 10001 - RW
+
+	Set_ICHEMcoil_Low_Flow_Alarm_Disabled = 10003,	// coil 10003 - RW
+
+	Set_ICHEMcoil_Low_Flow_Alarm_Reset = 10005,	// coil 10005 - momentary WO
+	Set_ICHEMcoil_Reset_Yesterday_Vol = 10006,	// coil 10006 - momentary WO
+	Set_ICHEMcoil_Reset_Week_Vol = 10007,	// coil 10007 - momentary WO
+	Set_ICHEMcoil_Reset_Month_Vol = 10008,	// coil 10008 - momentary WO
+	Set_ICHEMcoil_Reset_Year_Vol = 10009,	// coil 10009 - momentary WO
+	Set_ICHEMcoil_Reset_Forever_Vol = 10010,	// coil 10010 - momentary WO
+	Set_ICHEMcoil_Reserved = 10011,	// coil 10011
+	Set_ICHEMcoil_Set_1_Min_Cycle_Freq = 10012,	// coil 10012 - momentary WO
+	Set_ICHEMcoil_Set_15_Min_Cycle_Freq = 10013,	// coil 10013 - momentary WO
+	Set_ICHEMcoil_Set_30_Min_Cycle_Freq = 10014,	// coil 10014 - momentary WO
+	Set_ICHEMcoil_Set_1_Hour_Cycle_Freq = 10015,	// coil 10015 - momentary WO
+	Set_ICHEMcoil_Set_6_Hr_Cycle_Freq = 10016,	// coil 10016 - momentary WO
+	Set_ICHEMcoil_Set_12_Hr_Cycle_Freq = 10017,	// coil 10017 - momentary WO
+	Set_ICHEMcoil_Set_Daily_Cycle_Freq = 10018,	// coil 10018 - momentary WO
+	Set_ICHEMcoil_Start_Custom_Batch = 10019,	// coil 10019 - momentary WO
+	Set_ICHEMcoil_Stop_Custom_Batch = 10020,	// coil 10020 - momentary WO
+	Set_ICHEMcoil_Low_Tank_Alert = 10021,	// coil 10021 - RO
+
+	Set_ICHEMcoil_Digital_Output_Interface_Enabled = 10025,	// coil 10025 - RW
+	Set_ICHEMcoil_External_Override_Enabled = 10026,	// coil 10026 - RW
+	Set_ICHEMcoil_Start_Batch_Catch = 10029,	// coil 10029 - momentary WO
+	Set_ICHEMcoil_Dynamic_Flow_Enabled = 10030,	// coil 10030 - RW
+	Set_ICHEMcoil_Dynamic_Max_Flow_Enabled = 10031,	// coil 10031 - RW
+	Set_ICHEMcoil_Dynamic_Min_Flow_Enabled = 10032,	// coil 10032 - RW
+	Set_ICHEMcoil_Production_Unit_External_Override_HI_Enalbed = 10033,	// coil 10033 - RW
+	Set_ICHEMcoil_Production_Unit_External_Override_LO_Enalbed = 10034,	// coil 10034 - RW
+
+	Set_ICHEMcoil_Recovery_with_Time_on_Low_Flow_Alarm_Enabled = 10037,	// coil 10037 - RW
+}
+
 XmitNow <- 0; // used to force Xmit to agent - starts false
 
 // UART Communication example for the Modbus communication
@@ -187,6 +240,115 @@ agent.on("impControlVariables", function(vars)
                 " nv.IMP_ANALOG1_RANGE: "+nv.IMP_ANALOG1_RANGE+" nv.time: "+nv.time);
 */
 }); // agent.on("impControlVariables"
+
+// set an ICHEM controller Modbus float value
+agent.on(@"""Set_ICHEM_daily_volume""", function(ICHEMarray)
+{
+    writeICHEM("Set_ICHEM_daily_volume", ICHEMarray);
+}); // agent.on("Set_ICHEM_daily_volume"
+
+// set an ICHEM controller Modbus float value
+agent.on(@"""Set_ICHEM_dynamic_rate""", function(ICHEMarray)
+{
+    writeICHEM("Set_ICHEM_dynamic_rate", ICHEMarray);
+}); // agent.on("Set_ICHEM_daily_volume"
+
+// set an ICHEM controller Modbus float value
+agent.on(@"""Set_ICHEM_custom_batch_volume""", function(ICHEMarray)
+{
+    writeICHEM("Set_ICHEM_custom_batch_volume", ICHEMarray);
+}); // agent.on("Set_ICHEM_daily_volume"
+
+// set an ICHEM controller Modbus float value
+agent.on(@"""Set_ICHEM_dynamic_unit_ratio""", function(ICHEMarray)
+{
+    writeICHEM("Set_ICHEM_dynamic_unit_ratio", ICHEMarray);
+}); // agent.on("Set_ICHEM_daily_volume"
+
+// set an ICHEM controller Modbus float value
+agent.on(@"""Set_ICHEM_dynamic_chem_ratio""", function(ICHEMarray)
+{
+    writeICHEM("Set_ICHEM_dynamic_chem_ratio", ICHEMarray);
+}); // agent.on("Set_ICHEM_daily_volume"
+
+// set an ICHEM controller Modbus float value
+agent.on(@"""Set_ICHEM_dynamic_max_injection_volume""", function(ICHEMarray)
+{
+    writeICHEM("Set_ICHEM_dynamic_max_injection_volume", ICHEMarray);
+}); // agent.on("Set_ICHEM_daily_volume"
+
+// set an ICHEM controller Modbus float value
+agent.on(@"""Set_ICHEM_dynamic_min_injection_volume""", function(ICHEMarray)
+{
+    writeICHEM("Set_ICHEM_dynamic_min_injection_volume", ICHEMarray);
+}); // agent.on("Set_ICHEM_daily_volume"
+// set an ICHEM controller Modbus float value
+agent.on(@"""Set_ICHEM_production_unit_ext_override_hi_setpoint""", function(ICHEMarray)
+{
+    writeICHEM("Set_ICHEM_production_unit_ext_override_hi_setpoint", ICHEMarray);
+}); // agent.on("Set_ICHEM_daily_volume"
+// set an ICHEM controller Modbus float value
+agent.on(@"""Set_ICHEM_production_unit_ext_override_lo_setpoint""", function(ICHEMarray)
+{
+    writeICHEM("Set_ICHEM_production_unit_ext_override_lo_setpoint", ICHEMarray);
+}); // agent.on("Set_ICHEM_daily_volume"
+
+function writeICHEM(ICHEMregister_name, ICHEMarray)
+{
+    // look up register address in table using name sent from agent
+    local ICHEMregister = ICHEMrw[ICHEMregister_name];
+//    local ICHEMarrayReverse = ICHEMarray.reverse();
+//    local ICHEMarrayReverse = [ ICHEMarray[3], ICHEMarray[2], ICHEMarray[1], ICHEMarray[0] ];
+//    local ICHEMarraySwapCDAB = [ ICHEMarray[2], ICHEMarray[3], ICHEMarray[0], ICHEMarray[1] ];
+    local ICHEMarraySwapBADC = [ ICHEMarray[1], ICHEMarray[0], ICHEMarray[3], ICHEMarray[2] ];
+//    server.log("++++ ICHEM register "+ICHEMregister_name+" number: "+ICHEMregister);
+    server.log("++++ ICHEMarray 0: "+ICHEMarray[0]+" 1: "+ICHEMarray[1]+" 2: "+ICHEMarray[2]+" 3: "+ICHEMarray[3]);
+//    server.log("++++ ICHEMarrayReverse 0: "+ICHEMarrayReverse[0]+" 1: "+ICHEMarrayReverse[1]+" 2: "+ICHEMarrayReverse[2]+" 3: "+ICHEMarrayReverse[3]);
+
+    // Send ICHEM floating point number to register
+        // MB_ADDR_ICHEMfloat - MB hardware address
+        // ICHEMregister address of register
+        // MBrealNumberRegisters = 0x02; 2 registers
+        // MBrealNumberBytes = 0x04; - 4 bytes
+        // four bytes of data in ICHEMarray
+        
+        // Write multiple holding registers
+        // In this case there are two registers (4 bytes)
+        // needed for a floating point number
+    return MBwriteMultipleHoldingRegisters(
+            MB_ADDR_ICHEMfloat, // MB physical addr
+            ICHEMregister-40000, // addr of register minus offset
+            MBrealNumberRegisters, // 2 registers for float
+            MBrealNumberBytes, // 4 bytes
+            // data array with number of bytes
+            ICHEMarraySwapBADC); 
+} // function writeICHEM(ICHEMregister_name, ICHEMarray)
+
+
+//------------ Coils ------------
+
+// set an ICHEM controller Modbus coil value
+agent.on(@"""Set_ICHEMcoil_Low_Flow_Alarm_Reset""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Low_Flow_Alarm_Reset", coil_val);
+}); // agent.on("Set_ICHEMcoil_Low_Flow_Alarm_Reset"
+
+// set an ICHEM controller Modbus coil value
+agent.on(@"""Set_ICHEMcoil_Low_Flow_Alarm_Disabled""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Low_Flow_Alarm_Disabled", coil_val);
+}); // agent.on("Set_ICHEMcoil_Low_Flow_Alarm_Reset"
+
+function writeICHEMcoil(ICHEMcoil_name, coil_value)
+{
+    // look up coil address in table using name sent from agent
+    local ICHEMcoil = ICHEMrw[ICHEMregister_name];
+    return MBwriteSingleCoil(
+            MB_ADDR_ICHEMfloat, // MB physical addr
+            ICHEMcoil-10000, // addr of register minus offset
+            coil_value); // must be 0 or 1
+} // function writeICHEMcoil(ICHEMcoil_name, coil_value)
+
 
 // Receive a new quarts per day setpoint from agent
 agent.on("newsetpoint", function(newsetpoint) 
@@ -1080,7 +1242,7 @@ function dispatch()
                       nv.MB_ADDR_ICHEMfloat1_Found,
                       nv.MB_ADDR_ICHEMcoils_Found));
                       
-        str = "";
+//        str = "";
  
         // Give the Modbus test several tries before
         // shutting it off
