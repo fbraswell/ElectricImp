@@ -67,6 +67,8 @@ MB_Each_time <-
     ICHEM_daily_volume = -2, // 40100 float rw
     ICHEM_daily_cycles = -2, // 40102 float
     ICHEM_injection_rate = -2, // 40104 float
+    
+//    ICHEMcoil_Low_Flow_Alarm_Disabled // coil
 } // MB_Each_time
 
 TimeMark_140127 <- 
