@@ -69,6 +69,9 @@ const BOOTCOUNT = "bootcount";
 const TIME = "time";
 const SWITCH1 = "switch1";
 const SWITCH2 = "switch2";
+const HALL1 = "hall1";
+const HALL2 = "hall2";
+const PIN1_ALERT = "pin1_alert";
 const VBAT = "vbat";
 const RSSI = "rssi";
 const MEMORY = "memory";
@@ -328,25 +331,178 @@ function writeICHEM(ICHEMregister_name, ICHEMarray)
 //------------ Coils ------------
 
 // set an ICHEM controller Modbus coil value
+agent.on(@"""Set_ICHEMcoil_Manual_Mode""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Manual_Mode", coil_val);
+}); // agent.on("Set_ICHEMcoil_Manual_Mode"
+
+agent.on(@"""Set_ICHEMcoil_Start_Pump""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Start_Pump", coil_val);
+}); // agent.on("Set_ICHEMcoil_Start_Pump"
+
+
+
+
+agent.on(@"""Set_ICHEMcoil_Low_Flow_Alarm_Disabled""", function(coil_val)
+{
+    local MBreturn = writeICHEMcoil("Set_ICHEMcoil_Low_Flow_Alarm_Disabled", coil_val);
+    local MBstr = "MBstr: ";
+    for(local i=0; i<MBreturn.len(); i++)
+    {
+        MBstr = MBstr+MBreturn[i]+", ";
+    }
+    server.log("=========MBreturn: "+MBstr);
+}); // agent.on("Set_ICHEMcoil_Low_Flow_Alarm_Reset"
+
+
 agent.on(@"""Set_ICHEMcoil_Low_Flow_Alarm_Reset""", function(coil_val)
 {
     writeICHEMcoil("Set_ICHEMcoil_Low_Flow_Alarm_Reset", coil_val);
 }); // agent.on("Set_ICHEMcoil_Low_Flow_Alarm_Reset"
 
-// set an ICHEM controller Modbus coil value
-agent.on(@"""Set_ICHEMcoil_Low_Flow_Alarm_Disabled""", function(coil_val)
+
+
+agent.on(@"""Set_ICHEMcoil_Reset_Yesterday_Vol""", function(coil_val)
 {
-    writeICHEMcoil("Set_ICHEMcoil_Low_Flow_Alarm_Disabled", coil_val);
-}); // agent.on("Set_ICHEMcoil_Low_Flow_Alarm_Reset"
+    writeICHEMcoil("Set_ICHEMcoil_Reset_Yesterday_Vol", coil_val);
+}); // agent.on("Set_ICHEMcoil_Reset_Yesterday_Vol"
+
+agent.on(@"""Set_ICHEMcoil_Reset_Week_Vol""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Reset_Week_Vol", coil_val);
+}); // agent.on("Set_ICHEMcoil_Reset_Week_Vol"
+
+agent.on(@"""Set_ICHEMcoil_Reset_Month_Vol""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Reset_Month_Vol", coil_val);
+}); // agent.on("Set_ICHEMcoil_Reset_Month_Vol"
+
+agent.on(@"""Set_ICHEMcoil_Reset_Year_Vol""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Reset_Year_Vol", coil_val);
+}); // agent.on("Set_ICHEMcoil_Reset_Year_Vol"
+
+agent.on(@"""Set_ICHEMcoil_Reset_Forever_Vol""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Reset_Forever_Vol", coil_val);
+}); // agent.on("Set_ICHEMcoil_Reset_Forever_Vol"
+
+
+
+agent.on(@"""Set_ICHEMcoil_Set_1_Min_Cycle_Freq""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Set_1_Min_Cycle_Freq", coil_val);
+}); // agent.on("Set_ICHEMcoil_Set_1_Min_Cycle_Freq"
+
+agent.on(@"""Set_ICHEMcoil_Set_15_Min_Cycle_Freq""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Set_15_Min_Cycle_Freq", coil_val);
+}); // agent.on("Set_ICHEMcoil_Set_15_Min_Cycle_Freq"
+
+agent.on(@"""Set_ICHEMcoil_Set_30_Min_Cycle_Freq""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Set_30_Min_Cycle_Freq", coil_val);
+}); // agent.on("Set_ICHEMcoil_Set_30_Min_Cycle_Freq"
+
+agent.on(@"""Set_ICHEMcoil_Set_1_Hour_Cycle_Freq""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Set_1_Hour_Cycle_Freq", coil_val);
+}); // agent.on("Set_ICHEMcoil_Set_1_Hour_Cycle_Freq"
+
+agent.on(@"""Set_ICHEMcoil_Set_6_Hr_Cycle_Freq""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Set_6_Hr_Cycle_Freq", coil_val);
+}); // agent.on("Set_ICHEMcoil_Set_6_Hr_Cycle_Freq"
+
+agent.on(@"""Set_ICHEMcoil_Set_12_Hr_Cycle_Freq""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Set_12_Hr_Cycle_Freq", coil_val);
+}); // agent.on("Set_ICHEMcoil_Set_12_Hr_Cycle_Freq"
+
+agent.on(@"""Set_ICHEMcoil_Set_Daily_Cycle_Freq""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Set_Daily_Cycle_Freq", coil_val);
+}); // agent.on("Set_ICHEMcoil_Set_Daily_Cycle_Freq"
+
+
+
+agent.on(@"""Set_ICHEMcoil_Start_Custom_Batch""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Start_Custom_Batch", coil_val);
+}); // agent.on("Set_ICHEMcoil_Start_Custom_Batch"
+
+agent.on(@"""Set_ICHEMcoil_Stop_Custom_Batch""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Stop_Custom_Batch", coil_val);
+}); // agent.on("Set_ICHEMcoil_Stop_Custom_Batch"
+
+agent.on(@"""Set_ICHEMcoil_Low_Battery_Alarm_Reset""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Low_Battery_Alarm_Reset", coil_val);
+}); // agent.on("Set_ICHEMcoil_Low_Battery_Alarm_Reset"
+
+agent.on(@"""Set_ICHEMcoil_Digital_Output_Interface_Enabled""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Digital_Output_Interface_Enabled", coil_val);
+}); // agent.on("Set_ICHEMcoil_Digital_Output_Interface_Enabled"
+
+agent.on(@"""Set_ICHEMcoil_External_Override_Enabled""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_External_Override_Enabled", coil_val);
+}); // agent.on("Set_ICHEMcoil_External_Override_Enabled"
+
+agent.on(@"""Set_ICHEMcoil_Start_Batch_Catch""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Start_Batch_Catch", coil_val);
+}); // agent.on("Set_ICHEMcoil_Start_Batch_Catch"
+
+
+
+agent.on(@"""Set_ICHEMcoil_Dynamic_Flow_Enabled""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Dynamic_Flow_Enabled", coil_val);
+}); // agent.on("Set_ICHEMcoil_Dynamic_Flow_Enabled"
+
+agent.on(@"""Set_ICHEMcoil_Dynamic_Max_Flow_Enabled""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Dynamic_Max_Flow_Enabled", coil_val);
+}); // agent.on("Set_ICHEMcoil_Dynamic_Max_Flow_Enabled"
+
+agent.on(@"""Set_ICHEMcoil_Dynamic_Min_Flow_Enabled""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Dynamic_Min_Flow_Enabled", coil_val);
+}); // agent.on("Set_ICHEMcoil_Dynamic_Min_Flow_Enabled"
+
+
+
+agent.on(@"""Set_ICHEMcoil_Production_Unit_External_Override_HI_Enalbed""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Production_Unit_External_Override_HI_Enalbed", coil_val);
+}); // agent.on("Set_ICHEMcoil_Production_Unit_External_Override_HI_Enalbed"
+
+agent.on(@"""Set_ICHEMcoil_Production_Unit_External_Override_LO_Enalbed""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Production_Unit_External_Override_LO_Enalbed", coil_val);
+}); // agent.on("Set_ICHEMcoil_Production_Unit_External_Override_LO_Enalbed"
+
+
+
+agent.on(@"""Set_ICHEMcoil_Recovery_with_Time_on_Low_Flow_Alarm_Enabled""", function(coil_val)
+{
+    writeICHEMcoil("Set_ICHEMcoil_Recovery_with_Time_on_Low_Flow_Alarm_Enabled", coil_val);
+}); // agent.on("Set_ICHEMcoil_Recovery_with_Time_on_Low_Flow_Alarm_Enabled"
+
+
 
 function writeICHEMcoil(ICHEMcoil_name, coil_value)
 {
     // look up coil address in table using name sent from agent
-    local ICHEMcoil = ICHEMrw[ICHEMregister_name];
+    local ICHEMcoil = ICHEMrw[ICHEMcoil_name];
     return MBwriteSingleCoil(
-            MB_ADDR_ICHEMfloat, // MB physical addr
+            MB_ADDR_ICHEM, // MB physical addr
             ICHEMcoil-10000, // addr of register minus offset
-            coil_value); // must be 0 or 1
+            coil_value.tointeger()?255:0); // must be 0 or 1 - MB needs 0 or 255
 } // function writeICHEMcoil(ICHEMcoil_name, coil_value)
 
 
@@ -440,7 +596,7 @@ function calculateCRC ( puchMsg, usDataLen )
     local i = 0;
     while (usDataLen--)
     { // pass through message buffer
-        uIndex = uchCRCLo ^ puchMsg[i] ; // calculate the CRC
+        uIndex = uchCRCLo ^ puchMsg[i].tointeger() ; // calculate the CRC
         uchCRCLo = uchCRCHi ^ auchCRCHi[uIndex] ;
         uchCRCHi = auchCRCLo[uIndex] ;
         i++
@@ -537,6 +693,12 @@ function MBwriteSingleCoil(MBaddr, coilAddr, coilValue)
                     0, coilAddr,
                     // the upper byte is the value
                     coilValue, 0];
+    local MBstr = "values: ";
+    for(local i=0; i<MBcmd.len(); i++)
+    {
+        MBstr = MBstr+MBcmd[i]+", ";
+    }
+    server.log("===== coil cmd: "+MBstr);
     writeMB(MBcmd);
     return readMB();
 } // function MBwriteSingleCoil()
@@ -1093,7 +1255,27 @@ function logpressure()
     nv.sensor[ANALOG002] <- Analog1Volts;
 }   // function logpressure() 
 
-// callback for Hall switch 1 flowcount
+// callback for switch1 - transducer mode
+function hw_switch1t()
+{
+    local sw = HW_Switch1.read();
+    server.log("Switch 1 changed state: "+sw);
+    XmitNow = 1; // force transmit
+    dispatch(); // send report
+} // function hw_switch1()
+
+// callback for  hall switch on pin1 - pump mode
+function hw_switch1p()
+{
+//    local sw = HW_Switch1.read();
+//    server.log("Pin 1 changed state: "+sw);
+    server.log("Pin 1 changed state");
+    XmitNow = 1; // force transmit
+    dispatch(); // send report
+} // function hw_switch1()
+
+
+// callback for Hall switch 1 flowcount - pump mode
 function hall1()
 {
     server.log("-Hall 1 changed state");
@@ -1170,7 +1352,9 @@ function hardwareSetUp()
             // Pins 1 & 2 are not used for uart and are reassigned below
         HW_MBUart1.configure(9600, 8, PARITY_NONE, 1, NO_CTSRTS);
             // Pin 1 is Hall switch pulse input
-        HW_FlowCount.configure(DIGITAL_IN_PULLUP, hall1); // flow meter count
+//        HW_FlowCount.configure(DIGITAL_IN_PULLUP, hall1); // flow meter count
+        HW_FlowCount.configure(DIGITAL_IN_PULLUP, hw_switch1p); // flow meter count
+
         HW_Hall002.configure(DIGITAL_IN_PULLUP, hall2); // second hall switch
             // Pin 2 control direction of RS-485 Read or Write
         HW_ModBusDir.configure(DIGITAL_OUT);
@@ -1180,8 +1364,8 @@ function hardwareSetUp()
     } else
     {   // Transducer Mode
 //        server.log("Transducer Mode - Hardware Analog Input");
-        // switch1 
-        HW_Switch1.configure(DIGITAL_IN);
+        // switch1 - call back function switch1
+        HW_Switch1.configure(DIGITAL_IN_WAKEUP, hw_switch1t);
         // switch2
         HW_Switch2.configure(DIGITAL_IN);
         // Digital Write on pin 5 - control 3V regulator for sensors                                                                                                      
